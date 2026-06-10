@@ -73,9 +73,9 @@ export default async function PaymentsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
-              {payments.map(p => (
+              {payments.map((p, index) => (
                 <tr key={p.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{p.id.slice(-6)}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">{index + 1}</td>
                   <td className="px-6 py-4 text-[#8b92a5]">{p.reservationId.slice(-6)}</td>
                   <td className="px-6 py-4 font-bold">{p.reservation.client.name}</td>
                   <td className="px-6 py-4">{p.reservation.chalet.name}</td>

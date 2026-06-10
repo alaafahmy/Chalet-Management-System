@@ -34,9 +34,9 @@ export default async function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
-              {users.map(u => (
+              {users.map((u, index) => (
                 <tr key={u.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{u.id.slice(-6)}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">{index + 1}</td>
                   <td className="px-6 py-4 font-bold">{u.name}</td>
                   <td className="px-6 py-4" dir="ltr">{u.username}</td>
                   <td className="px-6 py-4">

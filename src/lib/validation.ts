@@ -61,6 +61,9 @@ export function validateName(name: string, label = "الاسم", minLen = 2, max
   if (!name?.trim()) return { valid: false, message: `${label} مطلوب` };
   if (name.trim().length < minLen) return { valid: false, message: `${label} على الأقل ${minLen} أحرف` };
   if (name.trim().length > maxLen) return { valid: false, message: `${label} لا يتجاوز ${maxLen} حرفاً` };
+  if (!/^[\u0600-\u06FF\s]+$/.test(name)) {
+    return { valid: false, message: `${label} يجب أن يحتوي على حروف عربية فقط` };
+  }
   return { valid: true };
 }
 

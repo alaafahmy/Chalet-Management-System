@@ -9,6 +9,7 @@ export default function Header() {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const titles: Record<string, string> = {
     "/dashboard": "لوحة التحكم",
@@ -47,7 +48,14 @@ export default function Header() {
             <Search size={18} className="text-[#8b92a5] ml-3" />
             <input
               type="text"
-              placeholder="بحث سريع... (اسم عميل، رقم حجز، شاليه)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchQuery.trim()) {
+                  router.push(`/dashboard/clients?search=${encodeURIComponent(searchQuery.trim())}`);
+                }
+              }}
+              placeholder="بحث سريع... (اسم عميل، رقم جوال، شاليه)"
               className="bg-transparent border-none text-white text-sm w-full focus:outline-none placeholder-[#8b92a5]"
             />
           </div>

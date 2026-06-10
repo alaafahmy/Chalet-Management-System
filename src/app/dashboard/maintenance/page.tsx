@@ -56,9 +56,9 @@ export default async function MaintenancePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
-              {maintenances.map(m => (
+              {maintenances.map((m, index) => (
                 <tr key={m.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{m.id.slice(-6)}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">{index + 1}</td>
                   <td className="px-6 py-4">{m.chalet.name}</td>
                   <td className="px-6 py-4">{m.type}</td>
                   <td className="px-6 py-4 font-bold">{formatCur(m.cost)}</td>

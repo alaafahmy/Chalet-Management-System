@@ -57,6 +57,18 @@ export async function updateClient(id: string, formData: FormData) {
   }
 }
 
+export async function deleteClient(id: string) {
+  try {
+    await prisma.client.delete({ where: { id } });
+    revalidatePath("/dashboard/clients");
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (e: any) {
+    // Handling foreign key constraint failure
+    return { error: "لا يمكن حذف العميل لوجود حجوزات مرتبطة به" };
+  }
+}
+
 // ─────────────────────────────────────────────
 // CHALET ACTIONS
 // ─────────────────────────────────────────────
