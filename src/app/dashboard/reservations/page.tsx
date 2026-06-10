@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { Plus, Eye, CheckCircle, XCircle, LogOut } from "lucide-react";
+import { Plus, CalendarDays, Eye, CheckCircle, XCircle, LogOut } from "lucide-react";
+import AddReservationForm from "@/components/AddReservationForm";
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +11,11 @@ export default async function ReservationsPage() {
       chalet: true,
       payments: true,
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { checkIn: 'desc' }
   });
+
+  const clients = await prisma.client.findMany({ select: { id: true, name: true } });
+  const chalets = await prisma.chalet.findMany({ select: { id: true, name: true, pricePerNight: true } });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -35,11 +39,9 @@ export default async function ReservationsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-          <span className="bg-green-500/20 text-green-500 p-2 rounded-lg">📋</span> إدارة الحجوزات
+          <span className="bg-[#d4a853]/20 text-[#d4a853] p-2 rounded-lg"><CalendarDays size={24} /></span> إدارة الحجوزات
         </h2>
-        <button className="bg-gradient-to-r from-[#d4a853] to-[#b18532] text-[#06080d] px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 transition-opacity">
-          <Plus size={18} /> حجز جديد
-        </button>
+        <AddReservationForm clients={clients} chalets={chalets} />
       </div>
 
       <div className="glass-panel overflow-hidden">

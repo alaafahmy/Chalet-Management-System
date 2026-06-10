@@ -55,3 +55,61 @@ export async function addChalet(formData: FormData) {
     return { error: "حدث خطأ أثناء الإضافة" };
   }
 }
+
+export async function addReservation(formData: FormData) {
+  const chaletId = formData.get("chaletId") as string;
+  const clientId = formData.get("clientId") as string;
+  const checkIn = new Date(formData.get("checkIn") as string);
+  const checkOut = new Date(formData.get("checkOut") as string);
+  const totalPrice = Number(formData.get("totalPrice"));
+  const notes = formData.get("notes") as string;
+
+  if (!chaletId || !clientId || isNaN(checkIn.getTime()) || isNaN(checkOut.getTime()) || !totalPrice) {
+    return { error: "جميع الحقول الأساسية مطلوبة" };
+  }
+
+  if (checkIn >= checkOut) {
+    return { error: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول" };
+  }
+
+  try {
+    // Conflict Checking Logic
+    const conflictingReservation = await prisma.reservation.findFirst({
+      where: {
+        chaletId: chaletId,
+        status: { in: ['مؤكد', 'معلق'] },
+        OR: [
+          {
+            AND: [
+              { checkIn: { lt: checkOut } },
+              { checkOut: { gt: checkIn } }
+            ]
+          }
+        ]
+      }
+    });
+
+    if (conflictingReservation) {
+      return { error: "يوجد تعارض! الشاليه محجوز في هذه الفترة المحددة." };
+    }
+
+    await prisma.reservation.create({
+      data: {
+        chaletId,
+        clientId,
+        checkIn,
+        checkOut,
+        totalPrice,
+        status: "معلق",
+        notes: notes || null
+      }
+    });
+
+    revalidatePath("/dashboard/reservations");
+    revalidatePath("/dashboard/calendar");
+    return { success: true };
+  } catch (e) {
+    console.error(e);
+    return { error: "حدث خطأ غير متوقع أثناء الحجز" };
+  }
+}
