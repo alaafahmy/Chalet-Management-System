@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, Eye } from "lucide-react";
+import { formatRefID } from "@/lib/utils";
 import EditClientForm from "./EditClientForm";
 import DeleteClientButton from "./DeleteClientButton";
 
@@ -65,9 +66,9 @@ export default function ClientList({ initialClients }: { initialClients: Client[
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
-              {filteredClients.map((c, index) => (
+              {filteredClients.map((c) => (
                 <tr key={c.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{index + 1}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">{formatRefID(c.id, 'CLI')}</td>
                   <td className="px-6 py-4 font-bold">{c.name}</td>
                   <td className="px-6 py-4" dir="ltr">{c.phone}</td>
                   <td className="px-6 py-4">{c.nationalId || '—'}</td>

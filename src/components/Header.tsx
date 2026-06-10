@@ -1,15 +1,29 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Search, LogOut, User } from "lucide-react";
-import { useState } from "react";
+import { Bell, Search, LogOut, User, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
+  
   const [loggingOut, setLoggingOut] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  
+  // Search State
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Notifications State
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const titles: Record<string, string> = {
     "/dashboard": "لوحة التحكم",
@@ -27,6 +41,61 @@ export default function Header() {
 
   const title = titles[pathname] || "النظام";
 
+  // Fetch notifications
+  useEffect(() => {
+    async function fetchNotifs() {
+      try {
+        const res = await fetch('/api/notifications');
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      } catch (e) {
+        console.error("Failed to fetch notifications");
+      }
+    }
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle click outside to close dropdowns
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchDropdown(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Handle Search Input
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.trim().length >= 2) {
+        setIsSearching(true);
+        try {
+          const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+          const data = await res.json();
+          setSearchResults(data.results || []);
+          setShowSearchDropdown(true);
+        } catch (e) {
+          console.error("Search failed");
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+        setShowSearchDropdown(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
   async function handleLogout() {
     setLoggingOut(true);
     try {
@@ -34,8 +103,18 @@ export default function Header() {
     } catch {
       // حتى لو فشل الطلب، نحذف الجلسة محلياً
     }
-    // استبدال كل التاريخ بصفحة تسجيل الدخول (لا يمكن الرجوع للخلف)
     router.replace("/");
+  }
+
+  async function markNotificationsAsRead() {
+    if (unreadCount === 0) return;
+    try {
+      await fetch('/api/notifications', { method: 'POST', body: JSON.stringify({}) });
+      setUnreadCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (e) {
+      console.error("Failed to mark as read");
+    }
   }
 
   return (
@@ -44,30 +123,102 @@ export default function Header() {
         <div className="flex items-center gap-6 flex-1">
           <h2 className="text-2xl font-bold text-white">{title}</h2>
 
-          <div className="hidden md:flex items-center glass-input px-4 py-2 w-96 relative">
+          <div className="hidden md:flex items-center glass-input px-4 py-2 w-96 relative" ref={searchRef}>
             <Search size={18} className="text-[#8b92a5] ml-3" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => {
+                if (searchResults.length > 0) setShowSearchDropdown(true);
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && searchQuery.trim()) {
+                  setShowSearchDropdown(false);
                   router.push(`/dashboard/clients?search=${encodeURIComponent(searchQuery.trim())}`);
                 }
               }}
-              placeholder="بحث سريع... (اسم عميل، رقم جوال، شاليه)"
+              placeholder="بحث سريع... (اسم عميل، رقم حجز، شاليه)"
               className="bg-transparent border-none text-white text-sm w-full focus:outline-none placeholder-[#8b92a5]"
             />
+
+            {/* Search Dropdown */}
+            {showSearchDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[#06080d] border border-[var(--color-border-subtle)] rounded-lg shadow-xl max-h-96 overflow-y-auto z-50">
+                {isSearching ? (
+                  <div className="p-4 text-center text-[#8b92a5] text-sm">جاري البحث...</div>
+                ) : searchResults.length > 0 ? (
+                  <div className="py-2">
+                    {searchResults.map((item, idx) => (
+                      <Link 
+                        key={idx} 
+                        href={item.link}
+                        onClick={() => setShowSearchDropdown(false)}
+                        className="block px-4 py-3 hover:bg-[var(--color-bg-input)] border-b border-[var(--color-border-subtle)] last:border-0"
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-bold text-[#d4a853] text-sm">{item.title}</span>
+                          <span className="text-xs px-2 py-0.5 rounded bg-[var(--color-bg-base)] text-[#8b92a5]">{item.type}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-[#8b92a5]">
+                          <span>{item.subtitle}</span>
+                          {item.ref && <span className="font-mono text-[10px] bg-white/5 px-1 rounded">{item.ref}</span>}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-[#8b92a5] text-sm">لا توجد نتائج مطابقة</div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           {/* الإشعارات */}
-          <div className="relative cursor-pointer hover:bg-[var(--color-bg-input)] p-2 rounded-full transition-colors">
-            <Bell size={24} className="text-[#d4a853]" />
-            <span className="absolute top-1 right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[var(--color-bg-base)]">
-              3
-            </span>
+          <div className="relative" ref={notifRef}>
+            <div 
+              className="cursor-pointer hover:bg-[var(--color-bg-input)] p-2 rounded-full transition-colors relative"
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                if (!showNotifications) markNotificationsAsRead();
+              }}
+            >
+              <Bell size={24} className="text-[#d4a853]" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-[var(--color-bg-base)]">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+
+            {/* Notifications Dropdown */}
+            {showNotifications && (
+              <div className="absolute top-full left-0 mt-2 w-80 bg-[#06080d] border border-[var(--color-border-subtle)] rounded-lg shadow-xl max-h-96 overflow-y-auto z-50">
+                <div className="p-3 border-b border-[var(--color-border-subtle)] font-bold text-white flex justify-between items-center">
+                  <span>الإشعارات</span>
+                  <button onClick={() => setShowNotifications(false)} className="text-[#8b92a5] hover:text-white">
+                    <X size={16} />
+                  </button>
+                </div>
+                {notifications.length > 0 ? (
+                  <div className="py-2">
+                    {notifications.map((n, idx) => (
+                      <div key={idx} className={`px-4 py-3 border-b border-[var(--color-border-subtle)] last:border-0 ${!n.read ? 'bg-white/5' : ''}`}>
+                        <div className="text-sm font-bold text-[#d4a853] mb-1">{n.title}</div>
+                        <div className="text-xs text-white mb-2">{n.description}</div>
+                        <div className="text-[10px] text-[#8b92a5]">
+                          {new Date(n.date).toLocaleString('ar-SA')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-[#8b92a5] text-sm">لا توجد إشعارات جديدة</div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* معلومات المستخدم */}

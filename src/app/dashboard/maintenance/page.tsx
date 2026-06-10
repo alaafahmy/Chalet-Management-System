@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { Wrench } from "lucide-react";
+import { formatRefID } from "@/lib/utils";
 import AddMaintenanceForm from "@/components/AddMaintenanceForm";
 import CompleteMaintenanceButton from "@/components/CompleteMaintenanceButton";
+import DeleteMaintenanceButton from "@/components/DeleteMaintenanceButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -56,9 +58,9 @@ export default async function MaintenancePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
-              {maintenances.map((m, index) => (
+              {maintenances.map(m => (
                 <tr key={m.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{index + 1}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">{formatRefID(m.id, 'MNT')}</td>
                   <td className="px-6 py-4">{m.chalet.name}</td>
                   <td className="px-6 py-4">{m.type}</td>
                   <td className="px-6 py-4 font-bold">{formatCur(m.cost)}</td>
@@ -72,9 +74,12 @@ export default async function MaintenancePage() {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    {m.status === 'جارية' && (
-                      <CompleteMaintenanceButton id={m.id} />
-                    )}
+                    <div className="flex gap-2">
+                      {m.status === 'جارية' && (
+                        <CompleteMaintenanceButton id={m.id} />
+                      )}
+                      <DeleteMaintenanceButton id={m.id} />
+                    </div>
                   </td>
                 </tr>
               ))}

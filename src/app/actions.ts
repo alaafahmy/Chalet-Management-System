@@ -339,32 +339,71 @@ export async function addMaintenance(formData: FormData) {
 
 export async function completeMaintenance(id: string) {
   try {
-    const maintenance = await prisma.maintenance.update({
+    const maintenance = await prisma.maintenance.findUnique({ where: { id } });
+    if (!maintenance) return { error: "الطلب غير موجود" };
+
+    await prisma.maintenance.update({
       where: { id },
-      data: { status: "مكتملة", completedDate: new Date() },
+      data: { status: 'مكتملة', completedDate: new Date() }
     });
 
-    // تحقق: هل توجد طلبات صيانة جارية أخرى لنفس الشاليه؟
-    const otherActive = await prisma.maintenance.findFirst({
-      where: { chaletId: maintenance.chaletId, id: { not: id }, status: "جارية" },
+    // Check if chalet has other active maintenance
+    const activeM = await prisma.maintenance.findFirst({
+      where: { chaletId: maintenance.chaletId, status: 'جارية' }
     });
 
-    if (!otherActive) {
-      // تحقق: هل الشاليه محجوز الآن؟
-      const activeReservation = await prisma.reservation.findFirst({
-        where: { chaletId: maintenance.chaletId, status: "مؤكد" },
+    if (!activeM) {
+      await prisma.chalet.update({
+        where: { id: maintenance.chaletId },
+        data: { status: 'متاح' }
       });
-      const newStatus = activeReservation ? "محجوز" : "متاح";
-      await prisma.chalet.update({ where: { id: maintenance.chaletId }, data: { status: newStatus } });
     }
 
     revalidatePath("/dashboard/maintenance");
     revalidatePath("/dashboard/chalets");
-    revalidatePath("/dashboard/calendar");
-    revalidatePath("/dashboard");
     return { success: true };
-  } catch (e) {
-    return { error: "حدث خطأ أثناء إنهاء الصيانة" };
+  } catch (e: any) {
+    return { error: "حدث خطأ أثناء التحديث" };
+  }
+}
+
+export async function deleteMaintenance(id: string) {
+  try {
+    const maintenance = await prisma.maintenance.findUnique({
+      where: { id },
+      include: { expense: true }
+    });
+    
+    if (!maintenance) return { error: "الطلب غير موجود" };
+
+    // 1. Delete associated expense if it exists
+    if (maintenance.expense) {
+      await prisma.expense.delete({ where: { id: maintenance.expense.id } });
+    }
+
+    // 2. Delete maintenance request
+    await prisma.maintenance.delete({ where: { id } });
+
+    // 3. Update chalet status if there are no other active maintenances and the deleted one was active
+    if (maintenance.status === 'جارية') {
+      const activeM = await prisma.maintenance.findFirst({
+        where: { chaletId: maintenance.chaletId, status: 'جارية' }
+      });
+
+      if (!activeM) {
+        await prisma.chalet.update({
+          where: { id: maintenance.chaletId },
+          data: { status: 'متاح' }
+        });
+      }
+    }
+
+    revalidatePath("/dashboard/maintenance");
+    revalidatePath("/dashboard/expenses");
+    revalidatePath("/dashboard/chalets");
+    return { success: true };
+  } catch (e: any) {
+    return { error: "لا يمكن حذف طلب الصيانة" };
   }
 }
 
@@ -430,5 +469,29 @@ export async function toggleUserStatus(id: string, active: boolean) {
     return { success: true };
   } catch (e) {
     return { error: "حدث خطأ أثناء تغيير حالة المستخدم" };
+  }
+}
+
+export async function deleteUser(id: string) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return { error: "المستخدم غير موجود" };
+    if (user.username === 'admin') return { error: "لا يمكن حذف المدير العام الأساسي" };
+
+    try {
+      await prisma.user.delete({ where: { id } });
+      revalidatePath("/dashboard/users");
+      return { success: true };
+    } catch (e: any) {
+      // إذا كان هناك تعارض بسبب السجلات القديمة، قم بعمل Soft Delete
+      await prisma.user.update({
+        where: { id },
+        data: { active: false, name: `${user.name} (محذوف)` }
+      });
+      revalidatePath("/dashboard/users");
+      return { error: "تم إيقاف حساب المستخدم وتغيير اسمه بدلاً من حذفه نهائياً للحفاظ على السجلات المالية المرتبطة به." };
+    }
+  } catch (e: any) {
+    return { error: "حدث خطأ أثناء المعالجة" };
   }
 }

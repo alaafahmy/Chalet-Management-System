@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CalendarDays, Eye } from "lucide-react";
+import { formatRefID } from "@/lib/utils";
 import AddReservationForm from "@/components/AddReservationForm";
 import ReservationActionButtons from "@/components/ReservationActionButtons";
 
@@ -79,13 +80,13 @@ export default async function ReservationsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
-              {reservations.map((r, index) => {
+              {reservations.map((r) => {
                 const paid = r.payments.reduce((sum, p) => sum + p.amount, 0);
                 const remaining = r.totalCost - paid;
 
                 return (
                   <tr key={r.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-[#d4a853]">{index + 1}</td>
+                    <td className="px-6 py-4 font-bold text-[#d4a853]">{formatRefID(r.id, 'RES')}</td>
                     <td className="px-6 py-4 font-bold">{r.client.name}</td>
                     <td className="px-6 py-4">{r.chalet.name}</td>
                     <td className="px-6 py-4">{formatDate(r.checkIn)}</td>

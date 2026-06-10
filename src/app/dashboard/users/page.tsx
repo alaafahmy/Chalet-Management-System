@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { Shield, UserCog } from "lucide-react";
+import { formatRefID } from "@/lib/utils";
 import AddUserForm from "@/components/AddUserForm";
 import EditUserForm from "@/components/EditUserForm";
 import ToggleUserStatusButton from "@/components/ToggleUserStatusButton";
+import DeleteUserButton from "@/components/DeleteUserButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -34,9 +36,9 @@ export default async function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
-              {users.map((u, index) => (
+              {users.map(u => (
                 <tr key={u.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{index + 1}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">{formatRefID(u.id, 'USR')}</td>
                   <td className="px-6 py-4 font-bold">{u.name}</td>
                   <td className="px-6 py-4" dir="ltr">{u.username}</td>
                   <td className="px-6 py-4">
@@ -55,6 +57,7 @@ export default async function UsersPage() {
                     <div className="flex gap-2">
                       <EditUserForm user={{ id: u.id, name: u.name, role: u.role }} />
                       <ToggleUserStatusButton id={u.id} active={u.active} />
+                      <DeleteUserButton id={u.id} username={u.username} />
                     </div>
                   </td>
                 </tr>

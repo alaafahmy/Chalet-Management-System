@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { TrendingDown } from "lucide-react";
+import { formatRefID } from "@/lib/utils";
 import AddExpenseForm from "@/components/AddExpenseForm";
 
 export const dynamic = 'force-dynamic';
@@ -64,9 +65,9 @@ export default async function ExpensesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
-              {expenses.map((e, index) => (
+              {expenses.map(e => (
                 <tr key={e.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{index + 1}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">{formatRefID(e.id, 'EXP')}</td>
                   <td className="px-6 py-4">{getTypeBadge(e.type)}</td>
                   <td className="px-6 py-4 font-bold text-red-400">{formatCur(e.amount)}</td>
                   <td className="px-6 py-4">{e.chalet?.name || '— (عام)'}</td>

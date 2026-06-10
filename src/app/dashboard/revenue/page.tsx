@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Plus, TrendingUp } from "lucide-react";
+import { formatRefID } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +61,7 @@ export default async function RevenuePage() {
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
               {payments.map(p => (
                 <tr key={p.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{p.id.slice(-6)}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">{formatRefID(p.id, 'PAY')}</td>
                   <td className="px-6 py-4 font-bold">{p.reservation.client.name}</td>
                   <td className="px-6 py-4">{p.reservation.chalet.name}</td>
                   <td className="px-6 py-4 font-bold text-emerald-500">{formatCur(p.amount)}</td>
