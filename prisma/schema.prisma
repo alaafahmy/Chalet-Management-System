@@ -62,6 +62,7 @@ model Reservation {
   pricePerNight Float
   totalCost     Float
   status        String    @default("معلق") // 'معلق', 'مؤكد', 'مكتمل', 'ملغي'
+  notes         String?
   
   createdBy     User?     @relation("CreatedReservations", fields: [createdById], references: [id])
   createdById   String?
