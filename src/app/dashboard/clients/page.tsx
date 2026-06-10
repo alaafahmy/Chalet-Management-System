@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { Edit, Eye, Plus, Search } from "lucide-react";
+import { Plus, Users, Search, Edit, Eye } from "lucide-react";
+import AddClientForm from "@/components/AddClientForm";
 
 export const dynamic = 'force-dynamic';
 
@@ -18,11 +19,9 @@ export default async function ClientsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-          <span className="bg-[#3b82f6]/20 text-[#3b82f6] p-2 rounded-lg">👥</span> إدارة العملاء
+          <span className="bg-blue-500/20 text-blue-500 p-2 rounded-lg"><Users size={24} /></span> سجل العملاء
         </h2>
-        <button className="bg-gradient-to-r from-[#d4a853] to-[#b18532] text-[#06080d] px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 transition-opacity">
-          <Plus size={18} /> إضافة عميل
-        </button>
+        <AddClientForm />
       </div>
 
       {/* Search & Filters */}

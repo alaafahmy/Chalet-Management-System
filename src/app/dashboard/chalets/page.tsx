@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { Edit, Trash2, Plus } from "lucide-react";
+import { Plus, Home, Edit, Trash2 } from "lucide-react";
+import AddChaletForm from "@/components/AddChaletForm";
 
 export const dynamic = 'force-dynamic';
 
@@ -33,11 +34,9 @@ export default async function ChaletsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-          <span>🏠</span> إدارة الشاليهات
+          <span className="bg-[#d4a853]/20 text-[#d4a853] p-2 rounded-lg"><Home size={24} /></span> إدارة الشاليهات
         </h2>
-        <button className="bg-gradient-to-r from-[#d4a853] to-[#b18532] text-[#06080d] px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 transition-opacity">
-          <Plus size={18} /> إضافة شاليه
-        </button>
+        <AddChaletForm />
       </div>
 
       {/* Filters (UI only for now) */}
