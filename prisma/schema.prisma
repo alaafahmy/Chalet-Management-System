@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -12,14 +13,18 @@ model User {
   name         String
   username     String        @unique
   password     String        // In a real app, this should be hashed
-  role         String        // 'admin', 'reservation_manager', 'accountant', 'receptionist', 'maintenance'
+  role         String        @default("استقبال") // 'admin', 'reservation_manager', 'accountant', 'receptionist', 'maintenance'
   roleAr       String        // Arabic role name
   active       Boolean       @default(true)
+  ref_number   String        @unique @default(cuid())
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   reservations Reservation[] @relation("CreatedReservations")
   payments     Payment[]     @relation("CreatedPayments")
+  expenses     Expense[]     @relation("CreatedExpenses")
+  maintenances Maintenance[] @relation("CreatedMaintenances")
+  auditLogs    AuditLog[]
 }
 
 model Chalet {
@@ -30,12 +35,14 @@ model Chalet {
   status        String        @default("متاح") // 'متاح', 'محجوز', 'تحت الصيانة'
   description   String?
   colorIndex    Int           @default(1)
+  ref_number    String        @unique @default(cuid())
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   reservations  Reservation[]
   expenses      Expense[]
   maintenances  Maintenance[]
+  revenues      Revenue[]
 }
 
 model Client {
@@ -44,6 +51,8 @@ model Client {
   phone       String        @unique
   nationalId  String?
   notes       String?
+  is_archived Boolean       @default(false)
+  ref_number  String        @unique @default(cuid())
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -63,14 +72,16 @@ model Reservation {
   totalCost     Float
   status        String    @default("معلق") // 'معلق', 'مؤكد', 'مكتمل', 'ملغي'
   notes         String?
+  ref_number    String    @unique @default(cuid())
   
-  createdBy     User?     @relation("CreatedReservations", fields: [createdById], references: [id])
-  createdById   String?
+  createdBy     User      @relation("CreatedReservations", fields: [created_by], references: [id])
+  created_by    String
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   payments      Payment[]
+  revenues      Revenue[]
 }
 
 model Payment {
@@ -81,12 +92,15 @@ model Payment {
   method        String      // 'نقد', 'تحويل بنكي', 'شبكة (مدى/Visa)'
   note          String?
   date          DateTime    @default(now())
+  ref_number    String      @unique @default(cuid())
   
-  createdBy     User?       @relation("CreatedPayments", fields: [createdById], references: [id])
-  createdById   String?
+  createdBy     User        @relation("CreatedPayments", fields: [created_by], references: [id])
+  created_by    String
 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  revenue       Revenue?
 }
 
 model Expense {
@@ -100,6 +114,10 @@ model Expense {
   
   maintenance   Maintenance? @relation(fields: [maintenanceId], references: [id])
   maintenanceId String?      @unique
+  ref_number    String       @unique @default(cuid())
+
+  createdBy     User         @relation("CreatedExpenses", fields: [created_by], references: [id])
+  created_by    String
 
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
@@ -115,9 +133,13 @@ model Maintenance {
   status        String    @default("جارية") // 'جارية', 'مكتملة'
   notes         String?
   completedDate DateTime?
+  ref_number    String    @unique @default(cuid())
 
   expense       Expense?
   
+  createdBy     User      @relation("CreatedMaintenances", fields: [created_by], references: [id])
+  created_by    String
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -132,4 +154,29 @@ model Notification {
   type        String   // 'reservation', 'expense', 'maintenance', 'system'
   
   createdAt   DateTime @default(now())
+}
+
+model Revenue {
+  id             String      @id @default(cuid())
+  reservation_id String
+  reservation    Reservation @relation(fields: [reservation_id], references: [id])
+  payment_id     String      @unique
+  payment        Payment     @relation(fields: [payment_id], references: [id])
+  chalet_id      String
+  chalet         Chalet      @relation(fields: [chalet_id], references: [id])
+  amount         Float
+  revenue_date   DateTime    @default(now())
+  ref_number     String      @unique @default(cuid())
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  user_id        String
+  user           User     @relation(fields: [user_id], references: [id])
+  action         String
+  table_affected String
+  record_id      String
+  old_value      Json?
+  new_value      Json?
+  timestamp      DateTime @default(now())
 }

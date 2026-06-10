@@ -18,33 +18,42 @@ export async function GET(req: Request) {
             { name: { contains: query, mode: 'insensitive' } },
             { phone: { contains: query } },
             { nationalId: { contains: query } },
+            { ref_number: { contains: query, mode: 'insensitive' } },
           ],
         },
         take: 5,
-        select: { id: true, name: true, phone: true },
+        select: { id: true, name: true, phone: true, ref_number: true },
       }),
       prisma.chalet.findMany({
         where: {
-          name: { contains: query, mode: 'insensitive' },
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { ref_number: { contains: query, mode: 'insensitive' } }
+          ],
         },
         take: 5,
-        select: { id: true, name: true, type: true },
+        select: { id: true, name: true, type: true, ref_number: true },
       }),
       prisma.reservation.findMany({
         where: {
-          client: {
-            OR: [
-              { name: { contains: query, mode: 'insensitive' } },
-              { phone: { contains: query } },
-            ]
-          }
+          OR: [
+            { ref_number: { contains: query, mode: 'insensitive' } },
+            {
+              client: {
+                OR: [
+                  { name: { contains: query, mode: 'insensitive' } },
+                  { phone: { contains: query } },
+                ]
+              }
+            }
+          ]
         },
         take: 5,
         include: { client: true, chalet: true },
       }),
     ]);
 
-    const results = [];
+    const results: any[] = [];
 
     // Format clients
     clients.forEach(c => {
@@ -54,7 +63,7 @@ export async function GET(req: Request) {
         title: c.name,
         subtitle: c.phone,
         link: `/dashboard/clients?search=${encodeURIComponent(c.name)}`,
-        ref: formatRefID(c.id, 'CLI')
+        ref: c.ref_number
       });
     });
 
@@ -66,7 +75,7 @@ export async function GET(req: Request) {
         title: c.name,
         subtitle: `نوع الشاليه: ${c.type}`,
         link: `/dashboard/chalets`,
-        ref: formatRefID(c.id, 'CHL') // Not really used in UI but good for format
+        ref: c.ref_number
       });
     });
 
@@ -78,25 +87,9 @@ export async function GET(req: Request) {
         title: `حجز باسم: ${r.client.name}`,
         subtitle: `الشاليه: ${r.chalet.name}`,
         link: `/dashboard/reservations`,
-        ref: formatRefID(r.id, 'RES')
+        ref: r.ref_number
       });
     });
-
-    // If query matches a formatted reference ID exactly (e.g. RES-XXXX)
-    if (query.toUpperCase().startsWith('RES-')) {
-      const allRes = await prisma.reservation.findMany({ include: { client: true, chalet: true } });
-      const target = allRes.find(r => formatRefID(r.id, 'RES') === query.toUpperCase());
-      if (target && !reservations.some(r => r.id === target.id)) {
-        results.unshift({
-          id: target.id,
-          type: 'حجز',
-          title: `حجز باسم: ${target.client.name}`,
-          subtitle: `الشاليه: ${target.chalet.name}`,
-          link: `/dashboard/reservations`,
-          ref: formatRefID(target.id, 'RES')
-        });
-      }
-    }
 
     return NextResponse.json({ results });
   } catch (error) {

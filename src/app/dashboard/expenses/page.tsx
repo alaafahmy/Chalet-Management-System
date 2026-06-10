@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function ExpensesPage() {
   const expenses = await prisma.expense.findMany({
-    include: { chalet: true },
+    include: { chalet: true, maintenance: true },
     orderBy: { date: 'desc' }
   });
 
@@ -67,7 +67,10 @@ export default async function ExpensesPage() {
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
               {expenses.map(e => (
                 <tr key={e.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{formatRefID(e.id, 'EXP')}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">
+                    {e.ref_number}
+                    {e.maintenance && <div className="text-xs text-orange-400 mt-1">({e.maintenance.ref_number})</div>}
+                  </td>
                   <td className="px-6 py-4">{getTypeBadge(e.type)}</td>
                   <td className="px-6 py-4 font-bold text-red-400">{formatCur(e.amount)}</td>
                   <td className="px-6 py-4">{e.chalet?.name || '— (عام)'}</td>

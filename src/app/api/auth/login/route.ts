@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
   try {
@@ -11,13 +12,20 @@ export async function POST(request: Request) {
 
     // التحقق من المستخدم في قاعدة البيانات
     const user = await prisma.user.findFirst({
-      where: { username, password, active: true },
+      where: { username, active: true },
     });
 
     // fallback: admin الافتراضي إذا لم تكن قاعدة البيانات تحتوي على مستخدمين
     const isDefaultAdmin = username === "admin" && password === "admin123";
 
-    if (!user && !isDefaultAdmin) {
+    let isValid = false;
+    if (user) {
+      isValid = await bcrypt.compare(password, user.password);
+    } else if (isDefaultAdmin) {
+      isValid = true;
+    }
+
+    if (!isValid) {
       return NextResponse.json(
         { error: "اسم المستخدم أو كلمة المرور غير صحيحة" },
         { status: 401 }

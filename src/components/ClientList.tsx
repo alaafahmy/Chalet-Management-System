@@ -9,6 +9,7 @@ import DeleteClientButton from "./DeleteClientButton";
 
 type Client = {
   id: string;
+  ref_number: string;
   name: string;
   phone: string;
   nationalId: string | null;
@@ -31,6 +32,7 @@ export default function ClientList({ initialClients }: { initialClients: Client[
   const filteredClients = initialClients.filter(c => 
     c.name.includes(search) || 
     c.phone.includes(search) || 
+    c.ref_number.includes(search) || 
     (c.nationalId && c.nationalId.includes(search))
   );
 
@@ -68,7 +70,7 @@ export default function ClientList({ initialClients }: { initialClients: Client[
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
               {filteredClients.map((c) => (
                 <tr key={c.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{formatRefID(c.id, 'CLI')}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">{c.ref_number}</td>
                   <td className="px-6 py-4 font-bold">{c.name}</td>
                   <td className="px-6 py-4" dir="ltr">{c.phone}</td>
                   <td className="px-6 py-4">{c.nationalId || '—'}</td>

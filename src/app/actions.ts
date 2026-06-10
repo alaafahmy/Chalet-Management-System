@@ -2,6 +2,19 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+import { requireRole } from "@/lib/auth";
+import { logAction } from "@/lib/audit";
+import {
+  validateSaudiPhone,
+  validateSaudiNationalId,
+  validateName,
+  validateAmount,
+  validateUsername,
+  validatePassword,
+  validateDateRange,
+} from "@/lib/validation";
+import { generateRefNumber } from "@/lib/reference-numbers";
 
 // ─── helper: revalidate all financial pages ───
 function revalidateFinancials() {
@@ -16,17 +29,26 @@ function revalidateFinancials() {
 // CLIENT ACTIONS
 // ─────────────────────────────────────────────
 export async function addClient(formData: FormData) {
+  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'موظف استقبال', 'admin', 'reservation_manager', 'receptionist']);
   const name = formData.get("name") as string;
   const phone = formData.get("phone") as string;
   const nationalId = formData.get("nationalId") as string;
   const notes = formData.get("notes") as string;
 
-  if (!name || !phone) return { error: "الاسم ورقم الجوال مطلوبان" };
+  const vName = validateName(name);
+  if (!vName.valid) return { error: vName.message };
+  const vPhone = validateSaudiPhone(phone);
+  if (!vPhone.valid) return { error: vPhone.message };
+  const vNat = validateSaudiNationalId(nationalId);
+  if (!vNat.valid) return { error: vNat.message };
 
   try {
-    await prisma.client.create({
-      data: { name, phone, nationalId: nationalId || null, notes: notes || null },
+    const ref = await generateRefNumber('CLT', prisma);
+    const client = await prisma.client.create({
+      data: { name, phone, nationalId: nationalId || null, notes: notes || null, ref_number: ref },
     });
+    await logAction({ userId: user.id, action: "إنشاء عميل", table: "Client", recordId: client.id, newValue: client });
+    
     revalidatePath("/dashboard/clients");
     revalidatePath("/dashboard");
     return { success: true };
@@ -37,18 +59,27 @@ export async function addClient(formData: FormData) {
 }
 
 export async function updateClient(id: string, formData: FormData) {
+  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'موظف استقبال', 'admin', 'reservation_manager', 'receptionist']);
   const name = formData.get("name") as string;
   const phone = formData.get("phone") as string;
   const nationalId = formData.get("nationalId") as string;
   const notes = formData.get("notes") as string;
 
-  if (!name || !phone) return { error: "الاسم ورقم الجوال مطلوبان" };
+  const vName = validateName(name);
+  if (!vName.valid) return { error: vName.message };
+  const vPhone = validateSaudiPhone(phone);
+  if (!vPhone.valid) return { error: vPhone.message };
+  const vNat = validateSaudiNationalId(nationalId);
+  if (!vNat.valid) return { error: vNat.message };
 
   try {
-    await prisma.client.update({
+    const old = await prisma.client.findUnique({ where: { id } });
+    const client = await prisma.client.update({
       where: { id },
       data: { name, phone, nationalId: nationalId || null, notes: notes || null },
     });
+    await logAction({ userId: user.id, action: "تعديل عميل", table: "Client", recordId: id, oldValue: old, newValue: client });
+    
     revalidatePath("/dashboard/clients");
     return { success: true };
   } catch (e: any) {
@@ -58,14 +89,32 @@ export async function updateClient(id: string, formData: FormData) {
 }
 
 export async function deleteClient(id: string) {
+  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'admin', 'reservation_manager']);
   try {
+    // FIX-BL-03: Archive instead of delete
+    const hasReservations = await prisma.reservation.count({
+      where: { clientId: id }
+    });
+    
+    if (hasReservations > 0) {
+      const client = await prisma.client.update({
+        where: { id },
+        data: { is_archived: true }
+      });
+      await logAction({ userId: user.id, action: "أرشفة عميل", table: "Client", recordId: id, newValue: client });
+      revalidatePath("/dashboard/clients");
+      return { success: true };
+    }
+    
+    const old = await prisma.client.findUnique({ where: { id } });
     await prisma.client.delete({ where: { id } });
+    await logAction({ userId: user.id, action: "حذف عميل", table: "Client", recordId: id, oldValue: old });
+    
     revalidatePath("/dashboard/clients");
     revalidatePath("/dashboard");
     return { success: true };
   } catch (e: any) {
-    // Handling foreign key constraint failure
-    return { error: "لا يمكن حذف العميل لوجود حجوزات مرتبطة به" };
+    return { error: "حدث خطأ أثناء حذف العميل" };
   }
 }
 
@@ -73,19 +122,27 @@ export async function deleteClient(id: string) {
 // CHALET ACTIONS
 // ─────────────────────────────────────────────
 export async function addChalet(formData: FormData) {
+  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'admin', 'reservation_manager']);
   const id = formData.get("id") as string;
   const name = formData.get("name") as string;
   const type = formData.get("type") as string;
   const pricePerNight = Number(formData.get("pricePerNight"));
   const description = formData.get("description") as string;
 
-  if (!id || !name || !type || !pricePerNight)
-    return { error: "جميع الحقول المطلوبة يجب تعبئتها" };
+  const vName = validateName(name, "اسم الشاليه");
+  if (!vName.valid) return { error: vName.message };
+  const vAmount = validateAmount(pricePerNight, "السعر");
+  if (!vAmount.valid) return { error: vAmount.message };
+
+  if (!id || !type) return { error: "جميع الحقول المطلوبة يجب تعبئتها" };
 
   try {
-    await prisma.chalet.create({
-      data: { id, name, type, pricePerNight, description: description || null, status: "متاح" },
+    const ref = await generateRefNumber('CH', prisma);
+    const chalet = await prisma.chalet.create({
+      data: { id, name, type, pricePerNight, description: description || null, status: "متاح", ref_number: ref },
     });
+    await logAction({ userId: user.id, action: "إنشاء شاليه", table: "Chalet", recordId: id, newValue: chalet });
+    
     revalidatePath("/dashboard/chalets");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/calendar");
@@ -97,20 +154,28 @@ export async function addChalet(formData: FormData) {
 }
 
 export async function updateChalet(id: string, formData: FormData) {
+  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'admin', 'reservation_manager']);
   const name = formData.get("name") as string;
   const type = formData.get("type") as string;
   const pricePerNight = Number(formData.get("pricePerNight"));
   const description = formData.get("description") as string;
   const status = formData.get("status") as string;
 
-  if (!name || !type || !pricePerNight)
-    return { error: "جميع الحقول المطلوبة يجب تعبئتها" };
+  const vName = validateName(name, "اسم الشاليه");
+  if (!vName.valid) return { error: vName.message };
+  const vAmount = validateAmount(pricePerNight, "السعر");
+  if (!vAmount.valid) return { error: vAmount.message };
+
+  if (!type) return { error: "جميع الحقول المطلوبة يجب تعبئتها" };
 
   try {
-    await prisma.chalet.update({
+    const old = await prisma.chalet.findUnique({ where: { id } });
+    const chalet = await prisma.chalet.update({
       where: { id },
       data: { name, type, pricePerNight, description: description || null, status },
     });
+    await logAction({ userId: user.id, action: "تعديل شاليه", table: "Chalet", recordId: id, oldValue: old, newValue: chalet });
+
     revalidatePath("/dashboard/chalets");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/calendar");
@@ -121,8 +186,12 @@ export async function updateChalet(id: string, formData: FormData) {
 }
 
 export async function deleteChalet(id: string) {
+  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'admin', 'reservation_manager']);
   try {
+    const old = await prisma.chalet.findUnique({ where: { id } });
     await prisma.chalet.delete({ where: { id } });
+    await logAction({ userId: user.id, action: "حذف شاليه", table: "Chalet", recordId: id, oldValue: old });
+    
     revalidatePath("/dashboard/chalets");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/calendar");
@@ -136,24 +205,24 @@ export async function deleteChalet(id: string) {
 // RESERVATION ACTIONS
 // ─────────────────────────────────────────────
 export async function addReservation(formData: FormData) {
+  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'موظف استقبال', 'admin', 'reservation_manager', 'receptionist']);
   const chaletId = formData.get("chaletId") as string;
   const clientId = formData.get("clientId") as string;
-  const checkIn = new Date(formData.get("checkIn") as string);
-  const checkOut = new Date(formData.get("checkOut") as string);
-  const totalCost = Number(formData.get("totalPrice"));
+  const checkInStr = formData.get("checkIn") as string;
+  const checkOutStr = formData.get("checkOut") as string;
   const notes = formData.get("notes") as string;
 
-  if (!chaletId || !clientId || isNaN(checkIn.getTime()) || isNaN(checkOut.getTime()) || !totalCost)
-    return { error: "جميع الحقول الأساسية مطلوبة" };
+  const vDate = validateDateRange(checkInStr, checkOutStr);
+  if (!vDate.valid) return { error: vDate.message };
 
-  if (checkIn >= checkOut)
-    return { error: "تاريخ الخروج يجب أن يكون بعد تاريخ الدخول" };
+  const checkIn = new Date(checkInStr);
+  const checkOut = new Date(checkOutStr);
+
+  if (!chaletId || !clientId) return { error: "جميع الحقول الأساسية مطلوبة" };
 
   const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
-  const pricePerNight = totalCost / nights;
 
   try {
-    // تحقق من التعارض — فقط الحجوزات المؤكدة أو المعلقة
     const conflict = await prisma.reservation.findFirst({
       where: {
         chaletId,
@@ -163,9 +232,39 @@ export async function addReservation(formData: FormData) {
     });
     if (conflict) return { error: "يوجد تعارض! الشاليه محجوز في هذه الفترة المحددة." };
 
-    await prisma.reservation.create({
-      data: { chaletId, clientId, checkIn, checkOut, nights, pricePerNight, totalCost, status: "معلق", notes: notes || null },
+    const chalet = await prisma.chalet.findUnique({
+      where: { id: chaletId },
+      select: { pricePerNight: true }
     });
+    if (!chalet) return { error: "الشاليه غير موجود" };
+
+    const pricePerNight = chalet.pricePerNight;
+    const totalCost = nights * pricePerNight;
+
+    const ref = await generateRefNumber('RES', prisma);
+    const reservation = await prisma.reservation.create({
+      data: { 
+        chaletId, 
+        clientId, 
+        checkIn, 
+        checkOut, 
+        nights, 
+        pricePerNight, 
+        totalCost, 
+        status: "معلق", 
+        notes: notes || null,
+        created_by: user.id,
+        ref_number: ref
+      },
+    });
+
+    // FIX-BL-02: Auto-update chalet status
+    await prisma.chalet.update({
+      where: { id: chaletId },
+      data: { status: "محجوز" }
+    });
+
+    await logAction({ userId: user.id, action: "إنشاء حجز", table: "Reservation", recordId: reservation.id, newValue: reservation });
 
     revalidatePath("/dashboard/reservations");
     revalidatePath("/dashboard/calendar");
@@ -178,6 +277,7 @@ export async function addReservation(formData: FormData) {
 }
 
 export async function updateReservationStatus(id: string, status: string) {
+  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'موظف استقبال', 'admin', 'reservation_manager', 'receptionist']);
   try {
     const reservation = await prisma.reservation.findUnique({
       where: { id },
@@ -185,12 +285,10 @@ export async function updateReservationStatus(id: string, status: string) {
     });
     if (!reservation) return { error: "الحجز غير موجود" };
 
-    // ── تحقق مهم: لا يمكن تسجيل خروج مع وجود رصيد متبقي ──
     if (status === "مكتمل") {
       const paid = reservation.payments.reduce((s, p) => s + p.amount, 0);
       const remaining = reservation.totalCost - paid;
       if (remaining > 0.01) {
-        // نسمح بفارق بسيط بسبب تقريب الأرقام
         return {
           error: `لا يمكن تسجيل الخروج! يوجد مبلغ متبقي غير مدفوع: ${new Intl.NumberFormat("ar-SA").format(remaining)} ر.س. يرجى تسجيل الدفعة أولاً.`,
           remainingAmount: remaining,
@@ -198,13 +296,13 @@ export async function updateReservationStatus(id: string, status: string) {
       }
     }
 
-    await prisma.reservation.update({ where: { id }, data: { status } });
+    const old = { status: reservation.status };
+    const res = await prisma.reservation.update({ where: { id }, data: { status } });
+    await logAction({ userId: user.id, action: "تحديث حالة الحجز", table: "Reservation", recordId: id, oldValue: old, newValue: res });
 
-    // تحديث حالة الشاليه بناءً على حالة الحجز
     if (status === "مؤكد") {
       await prisma.chalet.update({ where: { id: reservation.chaletId }, data: { status: "محجوز" } });
     } else if (status === "مكتمل" || status === "ملغي") {
-      // تحقق: إذا كان هناك حجوزات مؤكدة أخرى على نفس الشاليه، لا تُغيّر الحالة
       const otherActive = await prisma.reservation.findFirst({
         where: {
           chaletId: reservation.chaletId,
@@ -231,14 +329,16 @@ export async function updateReservationStatus(id: string, status: string) {
 // PAYMENT ACTIONS
 // ─────────────────────────────────────────────
 export async function addPayment(formData: FormData) {
+  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'محاسب', 'موظف استقبال', 'admin', 'reservation_manager', 'accountant', 'receptionist']);
   const reservationId = formData.get("reservationId") as string;
   const amount = Number(formData.get("amount"));
   const method = formData.get("method") as string;
   const note = formData.get("note") as string;
 
-  if (!reservationId || !amount || !method)
-    return { error: "جميع الحقول المطلوبة يجب تعبئتها" };
-  if (amount <= 0) return { error: "المبلغ يجب أن يكون أكبر من صفر" };
+  const vAmount = validateAmount(amount, "المبلغ");
+  if (!vAmount.valid) return { error: vAmount.message };
+
+  if (!reservationId || !method) return { error: "جميع الحقول المطلوبة يجب تعبئتها" };
 
   try {
     const reservation = await prisma.reservation.findUnique({
@@ -256,11 +356,36 @@ export async function addPayment(formData: FormData) {
       };
     }
 
-    await prisma.payment.create({
-      data: { reservationId, amount, method, note: note || null },
+    // FIX-BL-04: Generate receipt number
+    const ref = await generateRefNumber('RCP', prisma);
+    const receipt_number = ref;
+
+    const newPayment = await prisma.payment.create({
+      data: { 
+        reservationId, 
+        amount, 
+        method, 
+        note: note || null,
+        created_by: user.id,
+        ref_number: ref
+      },
     });
 
-    // إذا اكتمل الدفع، لا داعي لتغيير حالة الحجز تلقائياً — تبقى مؤكد حتى تسجيل الخروج
+    // FIX-BL-04: Auto copy to revenues
+    const revRef = await generateRefNumber('REV', prisma);
+    await prisma.revenue.create({
+      data: {
+        reservation_id: reservationId,
+        payment_id: newPayment.id,
+        chalet_id: reservation.chaletId,
+        amount: amount,
+        revenue_date: new Date(),
+        ref_number: revRef
+      }
+    });
+
+    await logAction({ userId: user.id, action: "تسجيل دفعة", table: "Payment", recordId: newPayment.id, newValue: newPayment });
+
     revalidateFinancials();
     revalidatePath("/dashboard/reservations");
     return { success: true };
@@ -274,19 +399,31 @@ export async function addPayment(formData: FormData) {
 // EXPENSE ACTIONS
 // ─────────────────────────────────────────────
 export async function addExpense(formData: FormData) {
+  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'محاسب', 'admin', 'reservation_manager', 'accountant']);
   const type = formData.get("type") as string;
   const amount = Number(formData.get("amount"));
   const chaletId = formData.get("chaletId") as string;
   const description = formData.get("description") as string;
 
-  if (!type || !amount || !description)
-    return { error: "جميع الحقول المطلوبة يجب تعبئتها" };
-  if (amount <= 0) return { error: "المبلغ يجب أن يكون أكبر من صفر" };
+  const vAmount = validateAmount(amount, "المبلغ");
+  if (!vAmount.valid) return { error: vAmount.message };
+
+  if (!type || !description) return { error: "جميع الحقول المطلوبة يجب تعبئتها" };
 
   try {
-    await prisma.expense.create({
-      data: { type, amount, chaletId: chaletId || null, description },
+    const ref = await generateRefNumber('EXP', prisma);
+    const expense = await prisma.expense.create({
+      data: { 
+        type, 
+        amount, 
+        chaletId: chaletId || null, 
+        description,
+        created_by: user.id,
+        ref_number: ref
+      },
     });
+    await logAction({ userId: user.id, action: "تسجيل مصروف", table: "Expense", recordId: expense.id, newValue: expense });
+
     revalidateFinancials();
     return { success: true };
   } catch (e) {
@@ -299,20 +436,32 @@ export async function addExpense(formData: FormData) {
 // MAINTENANCE ACTIONS
 // ─────────────────────────────────────────────
 export async function addMaintenance(formData: FormData) {
+  const user = await requireRole(['مدير النظام', 'فني صيانة', 'admin', 'maintenance']);
   const chaletId = formData.get("chaletId") as string;
   const type = formData.get("type") as string;
   const cost = Number(formData.get("cost"));
   const notes = formData.get("notes") as string;
 
-  if (!chaletId || !type || !cost)
-    return { error: "جميع الحقول المطلوبة يجب تعبئتها" };
+  const vAmount = validateAmount(cost, "التكلفة", 0);
+  if (!vAmount.valid) return { error: vAmount.message };
+
+  if (!chaletId || !type) return { error: "جميع الحقول المطلوبة يجب تعبئتها" };
 
   try {
+    const ref = await generateRefNumber('MNT', prisma);
     const maintenance = await prisma.maintenance.create({
-      data: { chaletId, type, cost, notes: notes || null, status: "جارية" },
+      data: { 
+        chaletId, 
+        type, 
+        cost, 
+        notes: notes || null, 
+        status: "جارية",
+        created_by: user.id,
+        ref_number: ref
+      },
     });
 
-    // إنشاء مصروف مرتبط تلقائياً
+    const expRef = await generateRefNumber('EXP', prisma);
     await prisma.expense.create({
       data: {
         type: "صيانة",
@@ -320,11 +469,13 @@ export async function addMaintenance(formData: FormData) {
         chaletId,
         description: `صيانة ${type} — شاليه`,
         maintenanceId: maintenance.id,
+        created_by: user.id,
+        ref_number: expRef
       },
     });
 
-    // تحديث حالة الشاليه إلى "تحت الصيانة"
     await prisma.chalet.update({ where: { id: chaletId }, data: { status: "تحت الصيانة" } });
+    await logAction({ userId: user.id, action: "طلب صيانة", table: "Maintenance", recordId: maintenance.id, newValue: maintenance });
 
     revalidatePath("/dashboard/maintenance");
     revalidatePath("/dashboard/chalets");
@@ -338,16 +489,17 @@ export async function addMaintenance(formData: FormData) {
 }
 
 export async function completeMaintenance(id: string) {
+  const user = await requireRole(['مدير النظام', 'فني صيانة', 'admin', 'maintenance']);
   try {
     const maintenance = await prisma.maintenance.findUnique({ where: { id } });
     if (!maintenance) return { error: "الطلب غير موجود" };
 
-    await prisma.maintenance.update({
+    const updated = await prisma.maintenance.update({
       where: { id },
       data: { status: 'مكتملة', completedDate: new Date() }
     });
+    await logAction({ userId: user.id, action: "إتمام صيانة", table: "Maintenance", recordId: id, newValue: updated });
 
-    // Check if chalet has other active maintenance
     const activeM = await prisma.maintenance.findFirst({
       where: { chaletId: maintenance.chaletId, status: 'جارية' }
     });
@@ -368,6 +520,7 @@ export async function completeMaintenance(id: string) {
 }
 
 export async function deleteMaintenance(id: string) {
+  const user = await requireRole(['مدير النظام', 'فني صيانة', 'admin', 'maintenance']);
   try {
     const maintenance = await prisma.maintenance.findUnique({
       where: { id },
@@ -376,15 +529,13 @@ export async function deleteMaintenance(id: string) {
     
     if (!maintenance) return { error: "الطلب غير موجود" };
 
-    // 1. Delete associated expense if it exists
     if (maintenance.expense) {
       await prisma.expense.delete({ where: { id: maintenance.expense.id } });
     }
 
-    // 2. Delete maintenance request
     await prisma.maintenance.delete({ where: { id } });
+    await logAction({ userId: user.id, action: "حذف صيانة", table: "Maintenance", recordId: id, oldValue: maintenance });
 
-    // 3. Update chalet status if there are no other active maintenances and the deleted one was active
     if (maintenance.status === 'جارية') {
       const activeM = await prisma.maintenance.findFirst({
         where: { chaletId: maintenance.chaletId, status: 'جارية' }
@@ -411,12 +562,20 @@ export async function deleteMaintenance(id: string) {
 // USER ACTIONS
 // ─────────────────────────────────────────────
 export async function addUser(formData: FormData) {
+  const userSession = await requireRole(['مدير النظام', 'admin']);
   const name = formData.get("name") as string;
   const username = formData.get("username") as string;
   const password = formData.get("password") as string;
   const role = formData.get("role") as string;
 
-  if (!name || !username || !password || !role) return { error: "جميع الحقول مطلوبة" };
+  const vName = validateName(name);
+  if (!vName.valid) return { error: vName.message };
+  const vUser = validateUsername(username);
+  if (!vUser.valid) return { error: vUser.message };
+  const vPass = validatePassword(password);
+  if (!vPass.valid) return { error: vPass.message };
+
+  if (!role) return { error: "جميع الحقول مطلوبة" };
 
   const roleMap: Record<string, string> = {
     admin: "مدير النظام",
@@ -427,9 +586,13 @@ export async function addUser(formData: FormData) {
   };
 
   try {
-    await prisma.user.create({
-      data: { name, username, password, role, roleAr: roleMap[role] || role, active: true },
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const ref = await generateRefNumber('USR', prisma);
+    const user = await prisma.user.create({
+      data: { name, username, password: hashedPassword, role, roleAr: roleMap[role] || role, active: true, ref_number: ref },
     });
+    await logAction({ userId: userSession.id, action: "إنشاء مستخدم", table: "User", recordId: user.id });
+
     revalidatePath("/dashboard/users");
     return { success: true };
   } catch (e: any) {
@@ -439,8 +602,12 @@ export async function addUser(formData: FormData) {
 }
 
 export async function updateUser(id: string, formData: FormData) {
+  const userSession = await requireRole(['مدير النظام', 'admin']);
   const name = formData.get("name") as string;
   const role = formData.get("role") as string;
+
+  const vName = validateName(name);
+  if (!vName.valid) return { error: vName.message };
 
   const roleMap: Record<string, string> = {
     admin: "مدير النظام",
@@ -451,10 +618,13 @@ export async function updateUser(id: string, formData: FormData) {
   };
 
   try {
-    await prisma.user.update({
+    const old = await prisma.user.findUnique({ where: { id } });
+    const user = await prisma.user.update({
       where: { id },
       data: { name, role, roleAr: roleMap[role] || role },
     });
+    await logAction({ userId: userSession.id, action: "تعديل مستخدم", table: "User", recordId: id, oldValue: old, newValue: user });
+
     revalidatePath("/dashboard/users");
     return { success: true };
   } catch (e) {
@@ -463,8 +633,11 @@ export async function updateUser(id: string, formData: FormData) {
 }
 
 export async function toggleUserStatus(id: string, active: boolean) {
+  const userSession = await requireRole(['مدير النظام', 'admin']);
   try {
-    await prisma.user.update({ where: { id }, data: { active: !active } });
+    const user = await prisma.user.update({ where: { id }, data: { active: !active } });
+    await logAction({ userId: userSession.id, action: "تغيير حالة المستخدم", table: "User", recordId: id, newValue: user });
+
     revalidatePath("/dashboard/users");
     return { success: true };
   } catch (e) {
@@ -473,6 +646,7 @@ export async function toggleUserStatus(id: string, active: boolean) {
 }
 
 export async function deleteUser(id: string) {
+  const userSession = await requireRole(['مدير النظام', 'admin']);
   try {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) return { error: "المستخدم غير موجود" };
@@ -480,18 +654,61 @@ export async function deleteUser(id: string) {
 
     try {
       await prisma.user.delete({ where: { id } });
+      await logAction({ userId: userSession.id, action: "حذف مستخدم", table: "User", recordId: id, oldValue: user });
+
       revalidatePath("/dashboard/users");
       return { success: true };
     } catch (e: any) {
-      // إذا كان هناك تعارض بسبب السجلات القديمة، قم بعمل Soft Delete
-      await prisma.user.update({
+      const updated = await prisma.user.update({
         where: { id },
         data: { active: false, name: `${user.name} (محذوف)` }
       });
+      await logAction({ userId: userSession.id, action: "إيقاف مستخدم (تعذر الحذف)", table: "User", recordId: id, newValue: updated });
+
       revalidatePath("/dashboard/users");
       return { error: "تم إيقاف حساب المستخدم وتغيير اسمه بدلاً من حذفه نهائياً للحفاظ على السجلات المالية المرتبطة به." };
     }
   } catch (e: any) {
     return { error: "حدث خطأ أثناء المعالجة" };
   }
+}
+
+// ─────────────────────────────────────────────
+// PROFIT REPORT
+// ─────────────────────────────────────────────
+export async function getProfitReport(startDate: Date, endDate: Date, chaletId?: string) {
+  await requireRole(['مدير النظام', 'مدير الحجوزات', 'محاسب', 'admin', 'reservation_manager', 'accountant']);
+  
+  const revenueFilter = {
+    revenue_date: { gte: startDate, lte: endDate },
+    ...(chaletId && { chalet_id: chaletId })
+  };
+  
+  const expenseFilter = {
+    date: { gte: startDate, lte: endDate },
+    ...(chaletId && { chaletId: chaletId })
+  };
+
+  const [totalRevenue, totalExpense] = await Promise.all([
+    prisma.revenue.aggregate({
+      where: revenueFilter,
+      _sum: { amount: true }
+    }),
+    prisma.expense.aggregate({
+      where: expenseFilter,
+      _sum: { amount: true }
+    })
+  ]);
+
+  const revenue = totalRevenue._sum.amount ?? 0;
+  const expense = totalExpense._sum.amount ?? 0;
+
+  return {
+    revenue,
+    expense,
+    profit: revenue - expense,
+    profitMargin: revenue > 0
+      ? ((revenue - expense) / revenue * 100).toFixed(2) + "%"
+      : "0%"
+  };
 }

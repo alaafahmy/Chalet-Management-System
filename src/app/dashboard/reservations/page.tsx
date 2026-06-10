@@ -3,6 +3,7 @@ import { CalendarDays, Eye } from "lucide-react";
 import { formatRefID } from "@/lib/utils";
 import AddReservationForm from "@/components/AddReservationForm";
 import ReservationActionButtons from "@/components/ReservationActionButtons";
+import ReservationDetailsButton from "@/components/ReservationDetailsButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -86,7 +87,7 @@ export default async function ReservationsPage() {
 
                 return (
                   <tr key={r.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-[#d4a853]">{formatRefID(r.id, 'RES')}</td>
+                    <td className="px-6 py-4 font-bold text-[#d4a853]">{r.ref_number}</td>
                     <td className="px-6 py-4 font-bold">{r.client.name}</td>
                     <td className="px-6 py-4">{r.chalet.name}</td>
                     <td className="px-6 py-4">{formatDate(r.checkIn)}</td>
@@ -117,12 +118,7 @@ export default async function ReservationsPage() {
                     <td className="px-6 py-4">{getStatusBadge(r.status)}</td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
-                        <button
-                          className="p-2 bg-[var(--color-bg-input)] rounded-md text-[#cacedb] hover:text-[#d4a853] transition-colors"
-                          title="تفاصيل"
-                        >
-                          <Eye size={16} />
-                        </button>
+                        <ReservationDetailsButton reservation={r} />
                         <ReservationActionButtons
                           id={r.id}
                           status={r.status}

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Receipt, FileText } from "lucide-react";
 import { formatRefID } from "@/lib/utils";
 import AddPaymentForm from "@/components/AddPaymentForm";
+import PrintReceiptButton from "@/components/PrintReceiptButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -76,8 +77,8 @@ export default async function PaymentsPage() {
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
               {payments.map(p => (
                 <tr key={p.id} className="hover:bg-[var(--color-bg-input)]/50 transition-colors">
-                  <td className="px-6 py-4 font-bold text-[#d4a853]">{formatRefID(p.id, 'PAY')}</td>
-                  <td className="px-6 py-4 text-[#8b92a5]">{formatRefID(p.reservationId, 'RES')}</td>
+                  <td className="px-6 py-4 font-bold text-[#d4a853]">{p.ref_number}</td>
+                  <td className="px-6 py-4 text-[#8b92a5]">{p.reservation.ref_number}</td>
                   <td className="px-6 py-4 font-bold">{p.reservation.client.name}</td>
                   <td className="px-6 py-4">{p.reservation.chalet.name}</td>
                   <td className="px-6 py-4 font-bold text-emerald-500">{formatCur(p.amount)}</td>
@@ -85,9 +86,7 @@ export default async function PaymentsPage() {
                   <td className="px-6 py-4">{formatDate(p.date)}</td>
                   <td className="px-6 py-4 text-[#8b92a5] max-w-[150px] truncate">{p.note || '—'}</td>
                   <td className="px-6 py-4">
-                    <button className="p-2 bg-[var(--color-bg-input)] rounded-md text-[#cacedb] hover:text-blue-500 transition-colors" title="طباعة السند">
-                      <FileText size={16} />
-                    </button>
+                    <PrintReceiptButton payment={p} />
                   </td>
                 </tr>
               ))}
