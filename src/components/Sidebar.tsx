@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -15,10 +16,13 @@ import {
   Wrench,
   UserCog,
   LogOut,
+  Menu,
+  X
 } from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
 
   const links = [
     { name: "الرئيسية", href: "/dashboard", icon: LayoutDashboard },
@@ -35,8 +39,23 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-[var(--color-bg-panel)] border-l border-[var(--color-border-subtle)] h-screen sticky top-0 flex flex-col z-20 overflow-y-auto">
-      {/* Brand */}
+    <>
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="md:hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-[#d4a853] to-[#b18532] text-[#06080d] p-4 rounded-full shadow-[0_0_20px_rgba(212,168,83,0.4)]"
+      >
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {isOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-30 transition-opacity" 
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed md:relative top-0 right-0 h-screen bg-[var(--color-bg-panel)] border-l border-[var(--color-border-subtle)] w-64 flex flex-col z-40 transition-transform duration-300 ${isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"} overflow-y-auto`}>
+        {/* Brand */}
       <div className="p-6 flex items-center justify-center border-b border-[var(--color-border-subtle)] gap-3">
         <div className="w-10 h-10 bg-gradient-to-br from-[#fbeea1] to-[#b18532] rounded-xl flex items-center justify-center shadow-lg shadow-[#d4a853]/20">
           <span className="text-xl">🏖️</span>
@@ -80,5 +99,6 @@ export default function Sidebar() {
         </Link>
       </div>
     </aside>
+    </>
   );
 }
