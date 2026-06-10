@@ -5,14 +5,19 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Start seeding...');
 
+  const bcrypt = require('bcryptjs');
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+
   // Create admin user
   const admin = await prisma.user.upsert({
     where: { username: 'admin' },
-    update: {},
+    update: {
+      password: hashedPassword,
+    },
     create: {
       name: 'مدير النظام',
       username: 'admin',
-      password: 'admin123', // Raw password for demo purposes
+      password: hashedPassword,
       role: 'admin',
       roleAr: 'مدير عام',
     },
