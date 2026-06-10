@@ -43,7 +43,7 @@ export default function Sidebar() {
         </div>
         <div>
           <h1 className="font-bold text-white text-lg">إدارة الشاليهات</h1>
-          <p className="text-[10px] text-[#8b92a5]">CyberX Team</p>
+          <p className="text-[10px] text-[#8b92a5]">Alaa & Ayman Team</p>
         </div>
       </div>
 

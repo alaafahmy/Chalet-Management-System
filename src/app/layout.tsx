@@ -9,7 +9,7 @@ const tajawal = Tajawal({
 });
 
 export const metadata: Metadata = {
-  title: "نظام إدارة الشاليهات | CyberX Team",
+  title: "نظام إدارة الشاليهات | Alaa & Ayman Team",
   description: "Chalet Management System designed for Saudi Arabia",
 };
 
