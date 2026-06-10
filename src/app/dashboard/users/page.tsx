@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Shield, UserCog } from "lucide-react";
 import { formatRefID } from "@/lib/utils";
+import { cookies } from "next/headers";
 import AddUserForm from "@/components/AddUserForm";
 import EditUserForm from "@/components/EditUserForm";
 import ToggleUserStatusButton from "@/components/ToggleUserStatusButton";
@@ -9,6 +10,18 @@ import DeleteUserButton from "@/components/DeleteUserButton";
 export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("session_token")?.value;
+  let currentUser = null;
+  
+  if (sessionCookie) {
+    try {
+      currentUser = JSON.parse(Buffer.from(sessionCookie, "base64").toString("utf-8"));
+    } catch (e) {
+      // Ignore
+    }
+  }
+
   const users = await prisma.user.findMany({
     orderBy: { createdAt: 'desc' }
   });
@@ -54,11 +67,15 @@ export default async function UsersPage() {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      <EditUserForm user={{ id: u.id, name: u.name, role: u.role }} />
-                      <ToggleUserStatusButton id={u.id} active={u.active} />
-                      <DeleteUserButton id={u.id} username={u.username} />
-                    </div>
+                    {currentUser?.username !== u.username ? (
+                      <div className="flex gap-2">
+                        <EditUserForm user={{ id: u.id, name: u.name, role: u.role }} />
+                        <ToggleUserStatusButton id={u.id} active={u.active} />
+                        <DeleteUserButton id={u.id} username={u.username} />
+                      </div>
+                    ) : (
+                      <span className="text-xs text-[#8b92a5]">أنت (المدير الحالي)</span>
+                    )}
                   </td>
                 </tr>
               ))}

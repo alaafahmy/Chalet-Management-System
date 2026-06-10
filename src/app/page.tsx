@@ -102,8 +102,12 @@ export default function LoginPage() {
                 placeholder="أدخل اسم المستخدم"
                 value={username}
                 onChange={(e) => {
-                  setUsername(e.target.value);
-                  setUsernameError("");
+                  const val = e.target.value;
+                  // السماح بالحروف الإنجليزية والأرقام فقط
+                  if (/^[a-zA-Z0-9_.]*$/.test(val)) {
+                    setUsername(val);
+                    setUsernameError("");
+                  }
                 }}
                 autoComplete="username"
                 maxLength={30}
