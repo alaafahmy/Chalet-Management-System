@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  username     String        @unique
+  password     String        // In a real app, this should be hashed
+  role         String        // 'admin', 'reservation_manager', 'accountant', 'receptionist', 'maintenance'
+  roleAr       String        // Arabic role name
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  reservations Reservation[] @relation("CreatedReservations")
+  payments     Payment[]     @relation("CreatedPayments")
+}
+
+model Chalet {
+  id            String        @id
+  name          String
+  type          String        // 'صغير', 'كبير', 'VIP'
+  pricePerNight Float
+  status        String        @default("متاح") // 'متاح', 'محجوز', 'تحت الصيانة'
+  description   String?
+  colorIndex    Int           @default(1)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  reservations  Reservation[]
+  expenses      Expense[]
+  maintenances  Maintenance[]
+}
+
+model Client {
+  id          String        @id @default(cuid())
+  name        String
+  phone       String        @unique
+  nationalId  String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  reservations Reservation[]
+}
+
+model Reservation {
+  id            String    @id @default(cuid())
+  client        Client    @relation(fields: [clientId], references: [id])
+  clientId      String
+  chalet        Chalet    @relation(fields: [chaletId], references: [id])
+  chaletId      String
+  checkIn       DateTime
+  checkOut      DateTime
+  nights        Int
+  pricePerNight Float
+  totalCost     Float
+  status        String    @default("معلق") // 'معلق', 'مؤكد', 'مكتمل', 'ملغي'
+  
+  createdBy     User?     @relation("CreatedReservations", fields: [createdById], references: [id])
+  createdById   String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  payments      Payment[]
+}
+
+model Payment {
+  id            String      @id @default(cuid())
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  reservationId String
+  amount        Float
+  method        String      // 'نقد', 'تحويل بنكي', 'شبكة (مدى/Visa)'
+  note          String?
+  date          DateTime    @default(now())
+  
+  createdBy     User?       @relation("CreatedPayments", fields: [createdById], references: [id])
+  createdById   String?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Expense {
+  id            String       @id @default(cuid())
+  type          String       // 'صيانة', 'نظافة', 'كهرباء', 'ماء', 'رواتب'
+  amount        Float
+  chalet        Chalet?      @relation(fields: [chaletId], references: [id])
+  chaletId      String?
+  description   String
+  date          DateTime     @default(now())
+  
+  maintenance   Maintenance? @relation(fields: [maintenanceId], references: [id])
+  maintenanceId String?      @unique
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Maintenance {
+  id            String    @id @default(cuid())
+  chalet        Chalet    @relation(fields: [chaletId], references: [id])
+  chaletId      String
+  type          String
+  cost          Float
+  date          DateTime  @default(now())
+  status        String    @default("جارية") // 'جارية', 'مكتملة'
+  notes         String?
+  completedDate DateTime?
+
+  expense       Expense?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  priority    String   @default("low") // 'low', 'medium', 'high'
+  read        Boolean  @default(false)
+  date        DateTime @default(now())
+  type        String   // 'reservation', 'expense', 'maintenance', 'system'
+  
+  createdAt   DateTime @default(now())
+}

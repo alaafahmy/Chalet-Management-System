@@ -1,65 +1,94 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // This is a placeholder for NextAuth login
+    // For now, we will just route to dashboard
+    if (username === "admin" && password === "admin123") {
+      router.push("/dashboard");
+    } else {
+      setError("اسم المستخدم أو كلمة المرور غير صحيحة");
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="glass-panel w-full max-w-md p-8 relative overflow-hidden">
+        {/* Glow effects */}
+        <div className="absolute top-[-50px] left-[-50px] w-[150px] h-[150px] bg-[#d4a853] rounded-full blur-[80px] opacity-20 pointer-events-none"></div>
+        <div className="absolute bottom-[-50px] right-[-50px] w-[150px] h-[150px] bg-[#3b82f6] rounded-full blur-[80px] opacity-10 pointer-events-none"></div>
+        
+        <div className="text-center mb-8 relative z-10">
+          <div className="w-20 h-20 bg-gradient-to-br from-[#fbeea1] to-[#b18532] rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-[#d4a853]/20">
+            <span className="text-4xl">🏖️</span>
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">نظام إدارة الشاليهات</h1>
+          <p className="text-[#8b92a5] text-sm tracking-wide">Chalet Management System</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg mb-6 text-sm text-center">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-6 relative z-10">
+          <div>
+            <label className="block text-sm font-medium text-[#cacedb] mb-2">اسم المستخدم</label>
+            <input
+              type="text"
+              className="glass-input w-full p-3"
+              placeholder="أدخل اسم المستخدم"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#cacedb] mb-2">كلمة المرور</label>
+            <input
+              type="password"
+              className="glass-input w-full p-3"
+              placeholder="أدخل كلمة المرور"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#cacedb] mb-2">الدور الوظيفي</label>
+            <select className="glass-input w-full p-3 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23cacedb%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:12px_12px] bg-[position:left_1rem_center]">
+              <option value="admin">مدير عام (System Administrator)</option>
+              <option value="reservation_manager">مدير حجوزات (Reservation Manager)</option>
+              <option value="accountant">محاسب (Accountant)</option>
+              <option value="receptionist">موظف استقبال (Receptionist)</option>
+              <option value="maintenance">مشرف صيانة (Maintenance Supervisor)</option>
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-gradient-to-r from-[#d4a853] to-[#b18532] hover:from-[#fbeea1] hover:to-[#d4a853] text-[#06080d] font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-95 shadow-lg shadow-[#d4a853]/20"
           >
-            Documentation
-          </a>
-        </div>
-      </main>
+            تسجيل الدخول
+          </button>
+
+          <p className="text-center text-[#8b92a5] text-xs mt-4">
+            للتجربة: admin / admin123
+          </p>
+        </form>
+      </div>
     </div>
   );
 }
