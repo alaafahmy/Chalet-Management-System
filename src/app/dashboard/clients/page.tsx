@@ -8,11 +8,16 @@ export const dynamic = 'force-dynamic';
 import { requirePermission } from "@/lib/auth";
 
 export default async function ClientsPage() {
-  await requirePermission("view_clients");
+  const user = await requirePermission("view_clients");
+  const canViewCreator = ['admin', 'reservation_manager', 'accountant', 'receptionist'].includes(user.role);
+
   const clients = await prisma.client.findMany({
     include: {
       _count: {
         select: { reservations: true }
+      },
+      createdBy: {
+        select: { name: true }
       }
     },
     orderBy: { createdAt: 'desc' }
@@ -27,7 +32,7 @@ export default async function ClientsPage() {
         <AddClientForm />
       </div>
 
-      <ClientList initialClients={clients} />
+      <ClientList initialClients={clients} canViewCreator={canViewCreator} />
     </div>
   );
 }

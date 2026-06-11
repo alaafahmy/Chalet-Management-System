@@ -10,12 +10,15 @@ export const dynamic = 'force-dynamic';
 import { requirePermission } from "@/lib/auth";
 
 export default async function ReservationsPage() {
-  await requirePermission("view_reservations");
+  const user = await requirePermission("view_reservations");
+  const canViewCreator = ['admin', 'reservation_manager', 'accountant', 'receptionist'].includes(user.role);
+
   const reservations = await prisma.reservation.findMany({
     include: {
       client: true,
       chalet: true,
       payments: true,
+      createdBy: { select: { name: true } }
     },
     orderBy: { checkIn: 'desc' }
   });
@@ -79,6 +82,7 @@ export default async function ReservationsPage() {
                 <th className="px-6 py-4 font-bold">الليالي</th>
                 <th className="px-6 py-4 font-bold">الإجمالي</th>
                 <th className="px-6 py-4 font-bold">المدفوع / المتبقي</th>
+                {canViewCreator && <th className="px-6 py-4 font-bold">بواسطة</th>}
                 <th className="px-6 py-4 font-bold">الحالة</th>
                 <th className="px-6 py-4 font-bold">إجراءات</th>
               </tr>
@@ -118,6 +122,11 @@ export default async function ReservationsPage() {
                         )}
                       </div>
                     </td>
+                    {canViewCreator && (
+                      <td className="px-6 py-4 text-[#8b92a5] text-xs">
+                        {r.createdBy?.name || '—'}
+                      </td>
+                    )}
                     <td className="px-6 py-4">{getStatusBadge(r.status)}</td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
@@ -136,7 +145,7 @@ export default async function ReservationsPage() {
 
               {reservations.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-[#8b92a5]">
+                  <td colSpan={canViewCreator ? 11 : 10} className="px-6 py-12 text-center text-[#8b92a5]">
                     <div className="text-4xl mb-4">📋</div>
                     <h4 className="text-lg font-bold text-white mb-2">لا توجد حجوزات</h4>
                     <p>انقر على "إضافة حجز" للبدء</p>

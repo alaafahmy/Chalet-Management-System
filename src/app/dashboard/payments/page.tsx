@@ -12,12 +12,14 @@ import { hasPermission } from "@/lib/permissions";
 export default async function PaymentsPage() {
   const user = await requirePermission("view_payments");
   const canCreate = hasPermission(user.role, "create_payments");
+  const canViewCreator = ['admin', 'reservation_manager', 'accountant'].includes(user.role);
 
   const payments = await prisma.payment.findMany({
     include: {
       reservation: {
         include: { client: true, chalet: true }
-      }
+      },
+      createdBy: { select: { name: true } }
     },
     orderBy: { date: 'desc' }
   });
@@ -76,6 +78,7 @@ export default async function PaymentsPage() {
                 <th className="px-6 py-4 font-bold">المبلغ</th>
                 <th className="px-6 py-4 font-bold">طريقة الدفع</th>
                 <th className="px-6 py-4 font-bold">التاريخ</th>
+                {canViewCreator && <th className="px-6 py-4 font-bold">المُحصِّل</th>}
                 <th className="px-6 py-4 font-bold">ملاحظات</th>
                 <th className="px-6 py-4 font-bold">إجراءات</th>
               </tr>
@@ -90,6 +93,11 @@ export default async function PaymentsPage() {
                   <td className="px-6 py-4 font-bold text-emerald-500">{formatCur(p.amount)}</td>
                   <td className="px-6 py-4">{getMethodBadge(p.method)}</td>
                   <td className="px-6 py-4">{formatDate(p.date)}</td>
+                  {canViewCreator && (
+                    <td className="px-6 py-4 text-[#8b92a5] text-xs">
+                      {p.createdBy?.name || '—'}
+                    </td>
+                  )}
                   <td className="px-6 py-4 text-[#8b92a5] max-w-[150px] truncate">{p.note || '—'}</td>
                   <td className="px-6 py-4">
                     <PrintReceiptButton payment={p} />
@@ -99,7 +107,7 @@ export default async function PaymentsPage() {
               
               {payments.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-[#8b92a5]">
+                  <td colSpan={canViewCreator ? 10 : 9} className="px-6 py-12 text-center text-[#8b92a5]">
                     <div className="text-4xl mb-4">💰</div>
                     <h4 className="text-lg font-bold text-white mb-2">لا توجد مدفوعات</h4>
                     <p>المدفوعات المسجلة ستظهر هنا</p>

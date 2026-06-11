@@ -15,9 +15,10 @@ type Client = {
   nationalId: string | null;
   notes: string | null;
   _count: { reservations: number };
+  createdBy?: { name: string } | null;
 };
 
-export default function ClientList({ initialClients }: { initialClients: Client[] }) {
+export default function ClientList({ initialClients, canViewCreator }: { initialClients: Client[], canViewCreator?: boolean }) {
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
   const [search, setSearch] = useState(initialSearch);
@@ -63,6 +64,7 @@ export default function ClientList({ initialClients }: { initialClients: Client[
                 <th className="px-6 py-4 font-bold">رقم الجوال</th>
                 <th className="px-6 py-4 font-bold">الهوية</th>
                 <th className="px-6 py-4 font-bold">الحجوزات</th>
+                {canViewCreator && <th className="px-6 py-4 font-bold">بواسطة</th>}
                 <th className="px-6 py-4 font-bold">ملاحظات</th>
                 <th className="px-6 py-4 font-bold">إجراءات</th>
               </tr>
@@ -79,6 +81,11 @@ export default function ClientList({ initialClients }: { initialClients: Client[
                       {c._count.reservations}
                     </span>
                   </td>
+                  {canViewCreator && (
+                    <td className="px-6 py-4 text-[#8b92a5] text-xs">
+                      {c.createdBy?.name || '—'}
+                    </td>
+                  )}
                   <td className="px-6 py-4 max-w-[150px] truncate text-[#8b92a5]">{c.notes || '—'}</td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
@@ -91,7 +98,7 @@ export default function ClientList({ initialClients }: { initialClients: Client[
               
               {filteredClients.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-[#8b92a5]">
+                  <td colSpan={canViewCreator ? 8 : 7} className="px-6 py-12 text-center text-[#8b92a5]">
                     <div className="text-4xl mb-4">👥</div>
                     <h4 className="text-lg font-bold text-white mb-2">لا يوجد عملاء</h4>
                     <p>لم يتم العثور على أي عميل يطابق بحثك</p>

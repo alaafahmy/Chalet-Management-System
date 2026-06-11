@@ -25,6 +25,7 @@ model User {
   payments     Payment[]     @relation("CreatedPayments")
   expenses     Expense[]     @relation("CreatedExpenses")
   maintenances Maintenance[] @relation("CreatedMaintenances")
+  clients      Client[]      @relation("CreatedClients")
   auditLogs    AuditLog[]
 }
 
@@ -58,6 +59,8 @@ model Client {
   updatedAt   DateTime      @updatedAt
 
   reservations Reservation[]
+  createdBy    User?         @relation("CreatedClients", fields: [created_by], references: [id])
+  created_by   String?
 }
 
 model Reservation {
