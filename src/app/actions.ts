@@ -799,7 +799,8 @@ export async function deleteMaintenance(id: string) {
 export async function addUser(formData: FormData) {
   const userSession = await requirePermission("manage_users");
   const name = formData.get("name") as string;
-  const username = formData.get("username") as string;
+  const rawUsername = formData.get("username") as string;
+  const username = rawUsername ? rawUsername.toLowerCase() : "";
   const password = formData.get("password") as string;
   const role = formData.get("role") as string;
 

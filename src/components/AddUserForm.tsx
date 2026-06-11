@@ -124,7 +124,7 @@ export default function AddUserForm() {
                     type="text"
                     value={username}
                     onChange={(e) => {
-                      setUsername(e.target.value);
+                      setUsername(e.target.value.toLowerCase());
                       if (usernameError) setUsernameError("");
                     }}
                     onBlur={() => {
