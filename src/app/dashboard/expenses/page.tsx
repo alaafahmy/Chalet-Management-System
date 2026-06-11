@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { TrendingDown } from "lucide-react";
 import { formatRefID } from "@/lib/utils";
 import AddExpenseForm from "@/components/AddExpenseForm";
+import ExportButton from "@/components/ExportButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,10 @@ export default async function ExpensesPage() {
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
           <span className="bg-red-500/20 text-red-500 p-2 rounded-lg"><TrendingDown size={24} /></span> المصروفات (سندات الصرف)
         </h2>
-        <AddExpenseForm chalets={chalets} />
+        <div className="flex gap-3">
+          <ExportButton type="expenses" chalets={chalets} />
+          <AddExpenseForm chalets={chalets} />
+        </div>
       </div>
 
       {/* Summary Card */}

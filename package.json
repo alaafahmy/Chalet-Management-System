@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "prisma generate && prisma db push --accept-data-loss && node prisma/seed.js && next build",
+    "build": "prisma generate && prisma db push --accept-data-loss && node prisma/seed.js && next build --webpack",
     "start": "next start",
     "lint": "next lint"
   },
@@ -18,7 +18,8 @@
     "pg": "^8.21.0",
     "prisma": "^6.19.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "xlsx": "^0.18.5"
   },
   "optionalDependencies": {
     "@tailwindcss/oxide-win32-x64-msvc": "^4.3.0",

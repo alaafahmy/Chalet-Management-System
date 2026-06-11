@@ -1,13 +1,47 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { signSession } from "@/lib/session";
+
+// Rate limiting بسيط في الذاكرة
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = loginAttempts.get(ip);
+
+  if (!record || now > record.resetAt) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + 15 * 60 * 1000 }); // نافذة 15 دقيقة
+    return true;
+  }
+
+  if (record.count >= 10) return false; // أقصى 10 محاولات كل 15 دقيقة
+
+  record.count++;
+  return true;
+}
 
 export async function POST(request: Request) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: "تم تجاوز الحد المسموح به من المحاولات. حاول مجدداً بعد 15 دقيقة." },
+        { status: 429 }
+      );
+    }
+
     const { username, password } = await request.json();
 
     if (!username || !password) {
-      return NextResponse.json({ error: "اسم المستخدم وكلمة المرور مطلوبان" }, { status: 400 });
+      return NextResponse.json(
+        { error: "اسم المستخدم وكلمة المرور مطلوبان" },
+        { status: 400 }
+      );
     }
 
     // التحقق من المستخدم في قاعدة البيانات
@@ -33,15 +67,28 @@ export async function POST(request: Request) {
     }
 
     const sessionData = user
-      ? { id: user.id, name: user.name, username: user.username, role: user.role, roleAr: user.roleAr, mustChangePassword: user.mustChangePassword }
-      : { id: "admin", name: "المدير العام", username: "admin", role: "admin", roleAr: "مدير النظام", mustChangePassword: false };
+      ? {
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          role: user.role,
+          roleAr: user.roleAr,
+          mustChangePassword: user.mustChangePassword,
+        }
+      : {
+          id: "admin",
+          name: "المدير العام",
+          username: "admin",
+          role: "admin",
+          roleAr: "مدير النظام",
+          mustChangePassword: false,
+        };
 
-    // إنشاء token بسيط (في الإنتاج يجب استخدام JWT)
-    const token = Buffer.from(JSON.stringify(sessionData)).toString("base64");
+    // توقيع الجلسة بـ HMAC-SHA256 لمنع التزوير
+    const token = signSession(sessionData);
 
     const response = NextResponse.json({ success: true, user: sessionData });
 
-    // تعيين cookie آمن
     response.cookies.set("session_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

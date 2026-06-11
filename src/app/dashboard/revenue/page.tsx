@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Plus, TrendingUp } from "lucide-react";
 import { formatRefID } from "@/lib/utils";
+import ExportButton from "@/components/ExportButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -35,10 +36,10 @@ export default async function RevenuePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
           <span className="bg-purple-500/20 text-purple-500 p-2 rounded-lg"><TrendingUp size={24} /></span> سجل الإيرادات
         </h2>
+        <ExportButton type="payments" label="تصدير الإيرادات" />
       </div>
 
       {/* Summary Card */}

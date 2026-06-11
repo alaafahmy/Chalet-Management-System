@@ -41,7 +41,7 @@ export default function Header({ userName = "مستخدم", userRole = "user" }:
 
   const title = titles[pathname] || "النظام";
 
-  // Fetch notifications
+  // Fetch notifications + trigger daily checks
   useEffect(() => {
     async function fetchNotifs() {
       try {
@@ -53,8 +53,24 @@ export default function Header({ userName = "مستخدم", userRole = "user" }:
         console.error("Failed to fetch notifications");
       }
     }
+
+    async function runDailyChecks() {
+      // تشغيل الفحص اليومي مرة واحدة في اليوم (مخزَّن في localStorage)
+      const lastCheck = localStorage.getItem("lastDailyCheck");
+      const today = new Date().toDateString();
+      if (lastCheck !== today) {
+        try {
+          await fetch('/api/cron/daily-checks');
+          localStorage.setItem("lastDailyCheck", today);
+        } catch (e) {
+          console.error("Daily check failed");
+        }
+      }
+    }
+
     fetchNotifs();
-    const interval = setInterval(fetchNotifs, 30000); // Check every 30s
+    runDailyChecks();
+    const interval = setInterval(fetchNotifs, 30000); // فحص كل 30 ثانية
     return () => clearInterval(interval);
   }, []);
 

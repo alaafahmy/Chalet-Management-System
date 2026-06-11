@@ -3,6 +3,7 @@ import { Receipt, FileText } from "lucide-react";
 import { formatRefID } from "@/lib/utils";
 import AddPaymentForm from "@/components/AddPaymentForm";
 import PrintReceiptButton from "@/components/PrintReceiptButton";
+import ExportButton from "@/components/ExportButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +64,10 @@ export default async function PaymentsPage() {
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
           <span className="bg-emerald-500/20 text-emerald-500 p-2 rounded-lg"><Receipt size={24} /></span> المدفوعات (سندات القبض)
         </h2>
-        {canCreate && <AddPaymentForm reservations={reservationOptions} />}
+        <div className="flex gap-3">
+          {hasPermission(user.role, "export_reports") && <ExportButton type="payments" />}
+          {canCreate && <AddPaymentForm reservations={reservationOptions} />}
+        </div>
       </div>
 
       <div className="glass-panel overflow-hidden">

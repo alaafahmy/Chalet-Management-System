@@ -4,6 +4,7 @@ import { formatRefID } from "@/lib/utils";
 import AddMaintenanceForm from "@/components/AddMaintenanceForm";
 import CompleteMaintenanceButton from "@/components/CompleteMaintenanceButton";
 import DeleteMaintenanceButton from "@/components/DeleteMaintenanceButton";
+import ExportButton from "@/components/ExportButton";
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +35,10 @@ export default async function MaintenancePage() {
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
           <span className="bg-orange-500/20 text-orange-500 p-2 rounded-lg"><Wrench size={24} /></span> إدارة الصيانة
         </h2>
-        {canManage && <AddMaintenanceForm chalets={chalets} />}
+        <div className="flex gap-3">
+          <ExportButton type="maintenance" chalets={chalets} />
+          {canManage && <AddMaintenanceForm chalets={chalets} />}
+        </div>
       </div>
 
       {/* Summary */}

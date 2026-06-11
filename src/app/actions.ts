@@ -15,6 +15,7 @@ import {
   validateDateRange,
 } from "@/lib/validation";
 import { generateRefNumber } from "@/lib/reference-numbers";
+import { createNotification } from "@/lib/notifications";
 
 // ─── helper: revalidate all financial pages ───
 function revalidateFinancials() {
@@ -228,14 +229,36 @@ export async function addReservation(formData: FormData) {
   const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
 
   try {
+    // فحص التعارض مع استثناء التسليم المباشر:
+    // يُسمح بالحجز إذا كان تاريخ الدخول يساوي تاريخ خروج حجز سابق (direct handover)
     const conflict = await prisma.reservation.findFirst({
       where: {
         chaletId,
         status: { in: ["مؤكد", "معلق"] },
-        AND: [{ checkIn: { lt: checkOut } }, { checkOut: { gt: checkIn } }],
+        AND: [
+          { checkIn: { lt: checkOut } },
+          { checkOut: { gt: checkIn } },
+          // استثناء التسليم المباشر: إذا خروج الحجز الموجود = دخول الجديد → لا تعارض
+          { NOT: { checkOut: { equals: checkIn } } }
+        ],
       },
     });
-    if (conflict) return { error: "يوجد تعارض! الشاليه محجوز في هذه الفترة المحددة." };
+
+    if (conflict) {
+      // جلب أقرب تاريخين متاحين كاقتراح بديل
+      const nextAvailable = await prisma.reservation.findFirst({
+        where: {
+          chaletId,
+          status: { in: ["مؤكد", "معلق"] },
+          checkOut: { gte: checkIn }
+        },
+        orderBy: { checkOut: 'asc' }
+      });
+      const suggestion = nextAvailable
+        ? ` أقرب تاريخ متاح بعد: ${new Date(nextAvailable.checkOut).toLocaleDateString('ar-SA')}`
+        : '';
+      return { error: `يوجد تعارض! الشاليه محجوز في هذه الفترة المحددة.${suggestion}` };
+    }
 
     const chalet = await prisma.chalet.findUnique({
       where: { id: chaletId },
@@ -264,7 +287,7 @@ export async function addReservation(formData: FormData) {
       },
     });
 
-    // FIX-BL-02: Auto-update chalet status
+    // Auto-update chalet status
     await prisma.chalet.update({
       where: { id: chaletId },
       data: { status: "محجوز" }
@@ -275,7 +298,7 @@ export async function addReservation(formData: FormData) {
     revalidatePath("/dashboard/reservations");
     revalidatePath("/dashboard/calendar");
     revalidatePath("/dashboard");
-    return { success: true };
+    return { success: true, reservationId: reservation.id };
   } catch (e) {
     console.error(e);
     return { error: "حدث خطأ غير متوقع أثناء الحجز" };
@@ -434,13 +457,17 @@ export async function updateReservationDetails(formData: FormData) {
       return { error: `لا يمكن تعديل الإجمالي ليكون أقل من المبلغ المدفوع (${new Intl.NumberFormat("ar-SA").format(paid)} ر.س). قم بعمل استرجاع أولاً.` };
     }
 
-    // Check conflicts (exclude current reservation)
+    // فحص التعارض مع استثناء التسليم المباشر
     const conflict = await prisma.reservation.findFirst({
       where: {
         chaletId,
         id: { not: id },
         status: { in: ["مؤكد", "معلق"] },
-        AND: [{ checkIn: { lt: checkOut } }, { checkOut: { gt: checkIn } }],
+        AND: [
+          { checkIn: { lt: checkOut } },
+          { checkOut: { gt: checkIn } },
+          { NOT: { checkOut: { equals: checkIn } } }
+        ],
       },
     });
     if (conflict) return { error: "يوجد تعارض! الشاليه محجوز في هذه الفترة المحددة." };
@@ -652,6 +679,15 @@ export async function addMaintenance(formData: FormData) {
     await prisma.chalet.update({ where: { id: chaletId }, data: { status: "تحت الصيانة" } });
     await logAction({ userId: user.id, action: "طلب صيانة", table: "Maintenance", recordId: maintenance.id, newValue: maintenance });
 
+    // إشعار تلقائي عند إنشاء طلب صيانة
+    const chaletInfo = await prisma.chalet.findUnique({ where: { id: chaletId }, select: { name: true } });
+    await createNotification({
+      title: "طلب صيانة جديد",
+      description: `تم تسجيل طلب صيانة للشاليه "${chaletInfo?.name}" — نوع: ${type}`,
+      type: "maintenance",
+      priority: "medium"
+    });
+
     revalidatePath("/dashboard/maintenance");
     revalidatePath("/dashboard/chalets");
     revalidatePath("/dashboard/calendar");
@@ -666,7 +702,10 @@ export async function addMaintenance(formData: FormData) {
 export async function completeMaintenance(id: string) {
   const user = await requirePermission("manage_maintenance");
   try {
-    const maintenance = await prisma.maintenance.findUnique({ where: { id } });
+    const maintenance = await prisma.maintenance.findUnique({
+      where: { id },
+      include: { chalet: { select: { name: true } } }
+    });
     if (!maintenance) return { error: "الطلب غير موجود" };
 
     const updated = await prisma.maintenance.update({
@@ -686,8 +725,17 @@ export async function completeMaintenance(id: string) {
       });
     }
 
+    // إشعار إتمام الصيانة
+    await createNotification({
+      title: "اكتملت أعمال الصيانة",
+      description: `اكتملت أعمال الصيانة للشاليه "${(maintenance as any).chalet?.name}" — ${maintenance.type}`,
+      type: "maintenance",
+      priority: "low"
+    });
+
     revalidatePath("/dashboard/maintenance");
     revalidatePath("/dashboard/chalets");
+    revalidatePath("/dashboard");
     return { success: true };
   } catch (e: any) {
     return { error: "حدث خطأ أثناء التحديث" };
@@ -926,6 +974,7 @@ export async function resetUserPassword(id: string, formData: FormData) {
 }
 
 import { cookies } from "next/headers";
+import { signSession, verifySession } from "@/lib/session";
 
 export async function changeMyPassword(id: string, formData: FormData) {
   const newPassword = formData.get("newPassword") as string;
@@ -941,23 +990,24 @@ export async function changeMyPassword(id: string, formData: FormData) {
       data: { password: hashedPassword, mustChangePassword: false }
     });
 
-    // Logging without session (or with existing session if available)
     await logAction({ userId: id, action: "تغيير كلمة المرور إجبارياً", table: "User", recordId: id });
     
-    // Update cookie so they don't have to log in again
+    // تحديث الكوكيز بجلسة موقَّعة جديدة
     const cookieStore = await cookies();
     const sessionToken = cookieStore.get("session_token")?.value;
     if (sessionToken) {
-      const sessionData = JSON.parse(Buffer.from(sessionToken, "base64").toString("utf-8"));
-      sessionData.mustChangePassword = false;
-      const token = Buffer.from(JSON.stringify(sessionData)).toString("base64");
-      cookieStore.set("session_token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 8,
-        path: "/",
-      });
+      const sessionData = verifySession(sessionToken) as any;
+      if (sessionData) {
+        sessionData.mustChangePassword = false;
+        const token = signSession(sessionData);
+        cookieStore.set("session_token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 60 * 60 * 8,
+          path: "/",
+        });
+      }
     }
 
     return { success: true };

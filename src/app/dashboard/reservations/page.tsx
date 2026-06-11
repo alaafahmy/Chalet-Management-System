@@ -5,10 +5,12 @@ import AddReservationForm from "@/components/AddReservationForm";
 import EditReservationForm from "@/components/EditReservationForm";
 import ReservationActionButtons from "@/components/ReservationActionButtons";
 import ReservationDetailsButton from "@/components/ReservationDetailsButton";
+import ExportButton from "@/components/ExportButton";
 
 export const dynamic = 'force-dynamic';
 
 import { requirePermission } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 
 export default async function ReservationsPage() {
   const user = await requirePermission("view_reservations");
@@ -59,7 +61,10 @@ export default async function ReservationsPage() {
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
           <span className="bg-[#d4a853]/20 text-[#d4a853] p-2 rounded-lg"><CalendarDays size={24} /></span> إدارة الحجوزات
         </h2>
-        <AddReservationForm clients={clients} chalets={chalets} />
+        <div className="flex gap-3">
+          {hasPermission(user.role, "export_reports") && <ExportButton type="reservations" chalets={chalets} />}
+          <AddReservationForm clients={clients} chalets={chalets} />
+        </div>
       </div>
 
       {/* إحصاء سريع للديون */}

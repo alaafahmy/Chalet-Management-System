@@ -4,9 +4,11 @@ import { LineChart, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 export const dynamic = 'force-dynamic';
 
 import { requirePermission } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
+import ExportButton from "@/components/ExportButton";
 
 export default async function ProfitsPage() {
-  await requirePermission("view_profit_analysis");
+  const user = await requirePermission("view_profit_analysis");
   const [payments, expenses, reservations] = await Promise.all([
     prisma.payment.findMany({ select: { amount: true, date: true } }),
     prisma.expense.findMany({ select: { amount: true, date: true } }),
@@ -65,7 +67,10 @@ export default async function ProfitsPage() {
           <span className="bg-[#d4a853]/20 text-[#d4a853] p-2 rounded-lg"><LineChart size={24} /></span>
           التقارير المالية والأرباح
         </h2>
-        <div className="text-[#8b92a5] text-sm">سنة {currentYear}</div>
+        <div className="flex gap-4 items-center">
+          <div className="text-[#8b92a5] text-sm">سنة {currentYear}</div>
+          {hasPermission(user.role, "export_reports") && <ExportButton type="profits" label="تصدير الأرباح" />}
+        </div>
       </div>
 
       {/* بطاقات الملخص الرئيسية */}
