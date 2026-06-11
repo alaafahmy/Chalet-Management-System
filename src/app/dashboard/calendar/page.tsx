@@ -1,11 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { ChevronRight, ChevronLeft, Calendar as CalendarIcon } from "lucide-react";
+import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 
 import { requirePermission } from "@/lib/auth";
 
-export default async function CalendarPage() {
+type Props = {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+export default async function CalendarPage({ searchParams }: Props) {
   await requirePermission("view_reservations");
   const chalets = await prisma.chalet.findMany();
   const reservations = await prisma.reservation.findMany({
@@ -15,10 +20,29 @@ export default async function CalendarPage() {
     include: { client: true }
   });
 
+  const params = await searchParams;
+
   // Calculate dates for current month view
   const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
+  let year = today.getFullYear();
+  let month = today.getMonth();
+
+  if (params?.year && !isNaN(Number(params.year))) {
+    year = Number(params.year);
+  }
+  if (params?.month && !isNaN(Number(params.month))) {
+    month = Number(params.month);
+  }
+
+  const currentDate = new Date(year, month, 1);
+  year = currentDate.getFullYear();
+  month = currentDate.getMonth();
+
+  const prevMonth = month === 0 ? 11 : month - 1;
+  const prevYear = month === 0 ? year - 1 : year;
+  
+  const nextMonth = month === 11 ? 0 : month + 1;
+  const nextYear = month === 11 ? year + 1 : year;
   
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => {
@@ -50,15 +74,15 @@ export default async function CalendarPage() {
         </h2>
         
         <div className="flex items-center gap-4 bg-[var(--color-bg-input)] rounded-lg p-1">
-          <button className="p-2 hover:bg-[var(--color-bg-base)] rounded-md transition-colors text-white">
+          <Link href={`/dashboard/calendar?month=${prevMonth}&year=${prevYear}`} className="p-2 hover:bg-[var(--color-bg-base)] rounded-md transition-colors text-white">
             <ChevronRight size={20} />
-          </button>
+          </Link>
           <div className="font-bold text-white px-4">
-            {today.toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' })}
+            {currentDate.toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' })}
           </div>
-          <button className="p-2 hover:bg-[var(--color-bg-base)] rounded-md transition-colors text-white">
+          <Link href={`/dashboard/calendar?month=${nextMonth}&year=${nextYear}`} className="p-2 hover:bg-[var(--color-bg-base)] rounded-md transition-colors text-white">
             <ChevronLeft size={20} />
-          </button>
+          </Link>
         </div>
       </div>
 

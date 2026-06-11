@@ -55,7 +55,7 @@ export default function ReservationDetailsButton({ reservation }: { reservation:
                 </div>
                 <div className="bg-[var(--color-bg-input)]/50 p-4 rounded-lg border border-[var(--color-border-subtle)]">
                   <div className="text-[#8b92a5] text-xs mb-1 flex items-center gap-1"><Home size={12}/> رقم الشاليه</div>
-                  <div className="font-bold text-white text-lg">{reservation.chalet.ref_number}</div>
+                  <div className="font-bold text-white text-lg">{reservation.chalet.id}</div>
                 </div>
               </div>
 

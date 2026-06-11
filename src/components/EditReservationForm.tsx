@@ -1,29 +1,57 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, X } from "lucide-react";
-import { addReservation } from "@/app/actions";
+import { useState, useEffect } from "react";
+import { Edit2, X } from "lucide-react";
+import { updateReservationDetails } from "@/app/actions";
 import { validateAmount, validateDateRange } from "@/lib/validation";
 
 type Client = { id: string; name: string };
 type Chalet = { id: string; name: string; pricePerNight: number };
 
-export default function AddReservationForm({ clients, chalets }: { clients: Client[], chalets: Chalet[] }) {
+interface ReservationData {
+  id: string;
+  clientId: string;
+  chaletId: string;
+  checkIn: Date;
+  checkOut: Date;
+  totalCost: number;
+  notes: string | null;
+  status: string;
+}
+
+export default function EditReservationForm({ reservation, clients, chalets }: { reservation: ReservationData, clients: Client[], chalets: Chalet[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form State
-  const [clientId, setClientId] = useState("");
-  const [chaletId, setChaletId] = useState("");
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [totalPrice, setTotalPrice] = useState("");
-  const [notes, setNotes] = useState("");
+  const [clientId, setClientId] = useState(reservation.clientId);
+  const [chaletId, setChaletId] = useState(reservation.chaletId);
+  
+  const formatDateForInput = (d: Date) => d.toISOString().split('T')[0];
+  
+  const [checkIn, setCheckIn] = useState(formatDateForInput(reservation.checkIn));
+  const [checkOut, setCheckOut] = useState(formatDateForInput(reservation.checkOut));
+  const [totalPrice, setTotalPrice] = useState(reservation.totalCost.toString());
+  const [notes, setNotes] = useState(reservation.notes || "");
 
   // Errors State
   const [dateError, setDateError] = useState("");
   const [priceError, setPriceError] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      setClientId(reservation.clientId);
+      setChaletId(reservation.chaletId);
+      setCheckIn(formatDateForInput(reservation.checkIn));
+      setCheckOut(formatDateForInput(reservation.checkOut));
+      setTotalPrice(reservation.totalCost.toString());
+      setNotes(reservation.notes || "");
+      setError(null);
+      setDateError("");
+      setPriceError("");
+    }
+  }, [isOpen, reservation]);
 
   function validateForm(): boolean {
     let valid = true;
@@ -47,7 +75,6 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
     return valid;
   }
 
-  // Calculate suggested price
   function handleDateChange(inDate: string, outDate: string, chId: string) {
     setCheckIn(inDate);
     setCheckOut(outDate);
@@ -74,20 +101,20 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
     setError(null);
 
     const formData = new FormData();
-    formData.append("clientId", clientId);
+    formData.append("id", reservation.id);
     formData.append("chaletId", chaletId);
     formData.append("checkIn", checkIn);
     formData.append("checkOut", checkOut);
     formData.append("totalPrice", totalPrice);
     formData.append("notes", notes);
 
-    const res = await addReservation(formData);
+    const res = await updateReservationDetails(formData);
     setPending(false);
+    
     if (res.error) {
       setError(res.error);
     } else {
       setIsOpen(false);
-      setClientId(""); setChaletId(""); setCheckIn(""); setCheckOut(""); setTotalPrice(""); setNotes("");
     }
   }
 
@@ -95,37 +122,37 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="bg-gradient-to-r from-[#d4a853] to-[#b18532] text-[#06080d] px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 transition-opacity"
+        className="p-2 bg-[var(--color-bg-input)] rounded-md text-[#cacedb] hover:text-blue-400 transition-colors"
+        title="تعديل الحجز"
       >
-        <Plus size={18} /> إضافة حجز جديد
+        <Edit2 size={16} />
       </button>
 
       {isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-panel p-6 w-full max-w-2xl relative animate-in fade-in zoom-in duration-200">
+          <div className="glass-panel p-6 w-full max-w-2xl relative animate-in fade-in zoom-in duration-200 text-right">
             <button 
-              onClick={() => { setIsOpen(false); setError(null); }}
+              onClick={() => setIsOpen(false)}
               className="absolute top-4 left-4 text-[#8b92a5] hover:text-white"
             >
               <X size={24} />
             </button>
-            <h3 className="text-xl font-bold text-white mb-6">إنشاء حجز جديد</h3>
+            <h3 className="text-xl font-bold text-white mb-6">تعديل الحجز</h3>
             
             {error && <div className="bg-red-500/20 text-red-400 p-3 rounded-lg mb-4 text-sm font-bold border border-red-500/30">{error}</div>}
 
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-[#8b92a5] mb-1">العميل <span className="text-red-500">*</span></label>
+                  <label className="block text-sm text-[#8b92a5] mb-1">العميل</label>
                   <select 
                     value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    required 
-                    className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-subtle)] rounded-lg p-3 text-white focus:outline-none focus:border-[#d4a853]"
+                    disabled
+                    className="w-full bg-[var(--color-bg-input)]/50 border border-[var(--color-border-subtle)] rounded-lg p-3 text-[#8b92a5] cursor-not-allowed"
                   >
-                    <option value="">اختر العميل...</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
+                  <p className="text-xs text-[#8b92a5] mt-1">لا يمكن تغيير العميل بعد إنشاء الحجز.</p>
                 </div>
                 <div>
                   <label className="block text-sm text-[#8b92a5] mb-1">الشاليه <span className="text-red-500">*</span></label>
@@ -201,7 +228,6 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
                   required 
                   min="1"
                   className={`w-full bg-[var(--color-bg-input)] border ${priceError ? 'border-red-500' : 'border-[var(--color-border-subtle)]'} rounded-lg p-3 text-white focus:outline-none focus:border-[#d4a853]`} 
-                  placeholder="مثال: 3000" 
                 />
                 {priceError && <p className="text-red-400 text-xs mt-1">{priceError}</p>}
               </div>
@@ -220,7 +246,7 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
               <div className="pt-4 flex gap-3">
                 <button 
                   type="button" 
-                  onClick={() => { setIsOpen(false); setError(null); }}
+                  onClick={() => setIsOpen(false)}
                   className="flex-1 bg-[var(--color-bg-input)] text-white p-3 rounded-lg hover:bg-[var(--color-border-subtle)] transition-colors"
                 >
                   إلغاء
@@ -228,9 +254,9 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
                 <button 
                   type="submit" 
                   disabled={pending}
-                  className="flex-1 bg-[#d4a853] text-[#06080d] font-bold p-3 rounded-lg hover:bg-[#b18532] transition-colors disabled:opacity-50"
+                  className="flex-1 bg-blue-600 text-white font-bold p-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  {pending ? "جاري التحقق..." : "تأكيد الحجز"}
+                  {pending ? "جاري الحفظ..." : "حفظ التعديلات"}
                 </button>
               </div>
             </form>

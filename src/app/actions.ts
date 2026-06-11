@@ -211,9 +211,14 @@ export async function addReservation(formData: FormData) {
   const checkInStr = formData.get("checkIn") as string;
   const checkOutStr = formData.get("checkOut") as string;
   const notes = formData.get("notes") as string;
+  const totalPriceStr = formData.get("totalPrice") as string;
 
   const vDate = validateDateRange(checkInStr, checkOutStr);
   if (!vDate.valid) return { error: vDate.message };
+
+  const customTotal = Number(totalPriceStr);
+  const vAmount = validateAmount(customTotal, "المبلغ الإجمالي");
+  if (!vAmount.valid) return { error: vAmount.message };
 
   const checkIn = new Date(checkInStr);
   const checkOut = new Date(checkOutStr);
@@ -238,8 +243,8 @@ export async function addReservation(formData: FormData) {
     });
     if (!chalet) return { error: "الشاليه غير موجود" };
 
-    const pricePerNight = chalet.pricePerNight;
-    const totalCost = nights * pricePerNight;
+    const totalCost = customTotal;
+    const pricePerNight = totalCost / nights;
 
     const ref = await generateRefNumber('RES', prisma);
     const reservation = await prisma.reservation.create({
@@ -324,6 +329,174 @@ export async function updateReservationStatus(id: string, status: string) {
     return { error: "حدث خطأ أثناء تحديث الحالة" };
   }
 }
+
+export async function cancelAndRefundReservation(id: string, refundAmount: number) {
+  const user = await requirePermission("manage_reservations");
+  
+  if (refundAmount < 0) return { error: "مبلغ الاسترجاع غير صالح" };
+
+  try {
+    const reservation = await prisma.reservation.findUnique({
+      where: { id },
+      include: { payments: true, chalet: true, client: true }
+    });
+
+    if (!reservation) return { error: "الحجز غير موجود" };
+    if (reservation.status === "ملغي") return { error: "الحجز ملغي مسبقاً" };
+
+    const paid = reservation.payments.reduce((s, p) => s + p.amount, 0);
+
+    if (refundAmount > paid + 0.01) {
+      return { error: `لا يمكن استرجاع مبلغ أكبر من المدفوع (${new Intl.NumberFormat("ar-SA").format(paid)} ر.س)` };
+    }
+
+    // 1. Cancel the reservation
+    const old = { status: reservation.status };
+    const res = await prisma.reservation.update({ where: { id }, data: { status: "ملغي" } });
+    await logAction({ userId: user.id, action: "إلغاء حجز", table: "Reservation", recordId: id, oldValue: old, newValue: res });
+
+    // 2. Free up the chalet if no other active reservations
+    const otherActive = await prisma.reservation.findFirst({
+      where: {
+        chaletId: reservation.chaletId,
+        id: { not: id },
+        status: "مؤكد",
+      },
+    });
+    if (!otherActive) {
+      await prisma.chalet.update({ where: { id: reservation.chaletId }, data: { status: "متاح" } });
+    }
+
+    // 3. Process the refund if applicable
+    if (refundAmount > 0) {
+      const expRef = await generateRefNumber('EXP', prisma);
+      const expense = await prisma.expense.create({
+        data: {
+          type: "استرجاع مبلغ حجز",
+          amount: refundAmount,
+          chaletId: reservation.chaletId,
+          description: `استرجاع مبلغ لحجز ملغي للعميل ${reservation.client.name} - رقم الحجز ${reservation.ref_number}`,
+          created_by: user.id,
+          ref_number: expRef
+        }
+      });
+      await logAction({ userId: user.id, action: "استرجاع مبلغ", table: "Expense", recordId: expense.id, newValue: expense });
+    }
+
+    revalidateFinancials();
+    revalidatePath("/dashboard/reservations");
+    revalidatePath("/dashboard/chalets");
+    revalidatePath("/dashboard/calendar");
+    revalidatePath("/dashboard");
+    
+    return { success: true };
+  } catch (e) {
+    console.error("Cancellation error:", e);
+    return { error: "حدث خطأ أثناء الإلغاء" };
+  }
+}
+
+export async function updateReservationDetails(formData: FormData) {
+  const user = await requirePermission("manage_reservations");
+  
+  const id = formData.get("id") as string;
+  const chaletId = formData.get("chaletId") as string;
+  const checkInStr = formData.get("checkIn") as string;
+  const checkOutStr = formData.get("checkOut") as string;
+  const notes = formData.get("notes") as string;
+  const totalPriceStr = formData.get("totalPrice") as string;
+
+  const vDate = validateDateRange(checkInStr, checkOutStr);
+  if (!vDate.valid) return { error: vDate.message };
+
+  const customTotal = Number(totalPriceStr);
+  const vAmount = validateAmount(customTotal, "المبلغ الإجمالي");
+  if (!vAmount.valid) return { error: vAmount.message };
+
+  const checkIn = new Date(checkInStr);
+  const checkOut = new Date(checkOutStr);
+
+  if (!id || !chaletId) return { error: "جميع الحقول الأساسية مطلوبة" };
+
+  const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+
+  try {
+    const existing = await prisma.reservation.findUnique({
+      where: { id },
+      include: { payments: true }
+    });
+
+    if (!existing) return { error: "الحجز غير موجود" };
+
+    const paid = existing.payments.reduce((s, p) => s + p.amount, 0);
+    if (customTotal < paid) {
+      return { error: `لا يمكن تعديل الإجمالي ليكون أقل من المبلغ المدفوع (${new Intl.NumberFormat("ar-SA").format(paid)} ر.س). قم بعمل استرجاع أولاً.` };
+    }
+
+    // Check conflicts (exclude current reservation)
+    const conflict = await prisma.reservation.findFirst({
+      where: {
+        chaletId,
+        id: { not: id },
+        status: { in: ["مؤكد", "معلق"] },
+        AND: [{ checkIn: { lt: checkOut } }, { checkOut: { gt: checkIn } }],
+      },
+    });
+    if (conflict) return { error: "يوجد تعارض! الشاليه محجوز في هذه الفترة المحددة." };
+
+    const chalet = await prisma.chalet.findUnique({
+      where: { id: chaletId },
+      select: { pricePerNight: true }
+    });
+    if (!chalet) return { error: "الشاليه غير موجود" };
+
+    const totalCost = customTotal;
+    const pricePerNight = totalCost / nights;
+
+    const old = { ...existing };
+
+    const updated = await prisma.reservation.update({
+      where: { id },
+      data: {
+        chaletId,
+        checkIn,
+        checkOut,
+        nights,
+        totalCost,
+        pricePerNight,
+        notes,
+      }
+    });
+
+    // Handle chalet status if confirmed
+    if (existing.status === "مؤكد" && existing.chaletId !== chaletId) {
+      // release old chalet
+      const otherActiveOld = await prisma.reservation.findFirst({
+        where: { chaletId: existing.chaletId, id: { not: id }, status: "مؤكد" }
+      });
+      if (!otherActiveOld) {
+        await prisma.chalet.update({ where: { id: existing.chaletId }, data: { status: "متاح" } });
+      }
+      
+      // reserve new chalet
+      await prisma.chalet.update({ where: { id: chaletId }, data: { status: "محجوز" } });
+    }
+
+    await logAction({ userId: user.id, action: "تعديل حجز", table: "Reservation", recordId: id, oldValue: old, newValue: updated });
+
+    revalidateFinancials();
+    revalidatePath("/dashboard/reservations");
+    revalidatePath("/dashboard/chalets");
+    revalidatePath("/dashboard/calendar");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+  } catch (e) {
+    console.error("Update Reservation error:", e);
+    return { error: "حدث خطأ أثناء التعديل" };
+  }
+}
+
 
 // ─────────────────────────────────────────────
 // PAYMENT ACTIONS

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle, XCircle, LogOut, X, AlertTriangle } from "lucide-react";
-import { updateReservationStatus } from "@/app/actions";
+import { updateReservationStatus, cancelAndRefundReservation } from "@/app/actions";
 
 type Action = "confirm" | "checkout" | "cancel";
 
@@ -21,23 +21,43 @@ export default function ReservationActionButtons({ id, status, totalCost, paid }
   const remaining = totalCost - paid;
   const isFullyPaid = remaining <= 0.01;
 
-  async function handleAction(action: Action) {
-    const statusMap: Record<Action, string> = {
-      confirm: "مؤكد",
-      checkout: "مكتمل",
-      cancel: "ملغي",
-    };
+  const [refundType, setRefundType] = useState<"none" | "full" | "partial">("none");
+  const [refundAmount, setRefundAmount] = useState<string>("");
 
+  async function handleAction(action: Action) {
     setPendingAction(action);
     setError(null);
-    const res = await updateReservationStatus(id, statusMap[action]);
+
+    let res;
+    if (action === "cancel") {
+      let amount = 0;
+      if (refundType === "full") amount = paid;
+      if (refundType === "partial") amount = Number(refundAmount);
+      
+      if (refundType === "partial" && (amount <= 0 || amount > paid)) {
+        setError(`مبلغ الاسترجاع يجب أن يكون أكبر من صفر وألا يتجاوز ${formatCur(paid)}`);
+        setPendingAction(null);
+        return;
+      }
+      
+      res = await cancelAndRefundReservation(id, amount);
+    } else {
+      const statusMap: Record<Action, string> = {
+        confirm: "مؤكد",
+        checkout: "مكتمل",
+        cancel: "ملغي",
+      };
+      res = await updateReservationStatus(id, statusMap[action]);
+    }
+
     setPendingAction(null);
 
     if (res && "error" in res && res.error) {
       setError(res.error);
-      // Don't close dialog on error
     } else {
       setConfirmAction(null);
+      setRefundType("none");
+      setRefundAmount("");
     }
   }
 
@@ -135,7 +155,47 @@ export default function ReservationActionButtons({ id, status, totalCost, paid }
               )}
 
               {confirmAction === "cancel" && (
-                <p className="text-[#8b92a5] text-sm mt-2">هل أنت متأكد من إلغاء هذا الحجز؟ لا يمكن التراجع عن هذا الإجراء.</p>
+                <div className="text-right">
+                  <p className="text-[#8b92a5] text-sm mt-2 mb-4">هل أنت متأكد من إلغاء هذا الحجز؟ لا يمكن التراجع عن هذا الإجراء.</p>
+                  
+                  {paid > 0 && (
+                    <div className="bg-[var(--color-bg-base)] border border-[var(--color-border-subtle)] rounded-lg p-4 space-y-3">
+                      <div className="flex justify-between items-center text-sm mb-2 border-b border-[var(--color-border-subtle)] pb-2">
+                        <span className="text-[#8b92a5]">المبلغ المدفوع:</span>
+                        <span className="font-bold text-emerald-400">{formatCur(paid)}</span>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-3 text-sm text-white cursor-pointer hover:bg-[var(--color-bg-input)] p-2 rounded-md transition-colors">
+                          <input type="radio" name="refund" checked={refundType === "none"} onChange={() => setRefundType("none")} className="accent-[#d4a853] w-4 h-4" />
+                          <span>لا يوجد استرجاع (الاحتفاظ بالمبلغ كرسوم إلغاء)</span>
+                        </label>
+                        <label className="flex items-center gap-3 text-sm text-white cursor-pointer hover:bg-[var(--color-bg-input)] p-2 rounded-md transition-colors">
+                          <input type="radio" name="refund" checked={refundType === "full"} onChange={() => setRefundType("full")} className="accent-[#d4a853] w-4 h-4" />
+                          <span>استرجاع كامل المبلغ ({formatCur(paid)})</span>
+                        </label>
+                        <label className="flex items-center gap-3 text-sm text-white cursor-pointer hover:bg-[var(--color-bg-input)] p-2 rounded-md transition-colors">
+                          <input type="radio" name="refund" checked={refundType === "partial"} onChange={() => setRefundType("partial")} className="accent-[#d4a853] w-4 h-4" />
+                          <span>استرجاع مبلغ مخصص (جزئي)</span>
+                        </label>
+                      </div>
+
+                      {refundType === "partial" && (
+                        <div className="mt-3 animate-in fade-in slide-in-from-top-2">
+                          <input 
+                            type="number" 
+                            value={refundAmount}
+                            onChange={(e) => setRefundAmount(e.target.value)}
+                            className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-subtle)] rounded-md p-3 text-white focus:border-[#d4a853] outline-none"
+                            placeholder={`المبلغ المراد استرجاعه (أقصى حد ${paid})`}
+                            max={paid}
+                            min={1}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
               {confirmAction === "confirm" && (
                 <p className="text-[#8b92a5] text-sm mt-2">سيتم تأكيد الحجز وتحديث حالة الشاليه إلى "محجوز".</p>

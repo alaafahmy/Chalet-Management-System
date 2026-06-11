@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { CalendarDays, Eye } from "lucide-react";
 import { formatRefID } from "@/lib/utils";
 import AddReservationForm from "@/components/AddReservationForm";
+import EditReservationForm from "@/components/EditReservationForm";
 import ReservationActionButtons from "@/components/ReservationActionButtons";
 import ReservationDetailsButton from "@/components/ReservationDetailsButton";
 
@@ -129,8 +130,11 @@ export default async function ReservationsPage() {
                     )}
                     <td className="px-6 py-4">{getStatusBadge(r.status)}</td>
                     <td className="px-6 py-4">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center">
                         <ReservationDetailsButton reservation={r} />
+                        {r.status !== 'ملغي' && r.status !== 'مكتمل' && (
+                          <EditReservationForm reservation={r} clients={clients} chalets={chalets} />
+                        )}
                         <ReservationActionButtons
                           id={r.id}
                           status={r.status}

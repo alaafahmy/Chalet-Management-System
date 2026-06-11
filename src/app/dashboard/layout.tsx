@@ -13,7 +13,7 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen bg-[var(--color-bg-base)]">
       <Sidebar userRole={user.role} />
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <Header />
+        <Header userName={user.name} userRole={user.roleAr} />
         <main className="flex-1 overflow-y-auto p-8 bg-[var(--color-bg-base)]">
           {children}
         </main>

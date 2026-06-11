@@ -5,7 +5,7 @@ import { Bell, Search, LogOut, User, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
-export default function Header() {
+export default function Header({ userName = "مستخدم", userRole = "user" }: { userName?: string, userRole?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   
@@ -224,8 +224,8 @@ export default function Header() {
           {/* معلومات المستخدم */}
           <div className="flex items-center gap-3 pr-4 border-r border-[var(--color-border-subtle)]">
             <div className="text-left">
-              <div className="text-sm font-bold text-white">المدير العام</div>
-              <div className="text-xs text-[#8b92a5]">admin</div>
+              <div className="text-sm font-bold text-white">{userName}</div>
+              <div className="text-xs text-[#8b92a5]">{userRole}</div>
             </div>
             <div className="w-10 h-10 bg-gradient-to-br from-[#d4a853] to-[#b18532] rounded-full flex items-center justify-center font-bold text-[#06080d]">
               <User size={18} />
