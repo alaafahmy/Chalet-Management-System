@@ -218,10 +218,14 @@ export async function GET(req: NextRequest) {
   td { padding: 7px 12px; border-bottom: 1px solid #eee; }
   tr:nth-child(even) { background: #f8f8f8; }
   .footer { text-align: center; margin-top: 20px; font-size: 11px; color: #999; }
-  @media print { button { display: none; } }
+  @media print { .no-print { display: none !important; } }
 </style>
 </head>
 <body>
+<div class="no-print" style="text-align: center; margin-bottom: 20px; padding: 15px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px;">
+  <p style="margin-top: 0; color: #8a6d3b; font-weight: bold; font-size: 14px;">لحفظ التقرير كملف PDF على الهاتف، اضغط على الزر أدناه ثم اختر "Save as PDF" أو "حفظ بتنسيق PDF" من خيارات الطابعة.</p>
+  <button onclick="window.print()" style="background: #1a1a2e; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer;">🖨️ طباعة / حفظ كـ PDF</button>
+</div>
 <h1>نظام إدارة الشاليهات</h1>
 <p class="subtitle">تقرير ${sheetName} — من ${start.toLocaleDateString("ar-SA")} إلى ${end.toLocaleDateString("ar-SA")}</p>
 <table>
@@ -236,7 +240,12 @@ export async function GET(req: NextRequest) {
   </tbody>
 </table>
 <p class="footer">تم الإنشاء بتاريخ: ${new Date().toLocaleString("ar-SA")}</p>
-<script>window.onload = () => { window.print(); }</script>
+<script>
+  window.onload = () => {
+    // حاول فتح نافذة الطباعة تلقائياً للأجهزة التي تدعم ذلك
+    setTimeout(() => { window.print(); }, 500);
+  };
+</script>
 </body>
 </html>`;
 
