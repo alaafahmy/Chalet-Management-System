@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
-import { requireRole } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { logAction } from "@/lib/audit";
 import {
   validateSaudiPhone,
@@ -29,7 +29,7 @@ function revalidateFinancials() {
 // CLIENT ACTIONS
 // ─────────────────────────────────────────────
 export async function addClient(formData: FormData) {
-  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'موظف استقبال', 'admin', 'reservation_manager', 'receptionist']);
+  const user = await requirePermission("manage_clients");
   const name = formData.get("name") as string;
   const phone = formData.get("phone") as string;
   const nationalId = formData.get("nationalId") as string;
@@ -59,7 +59,7 @@ export async function addClient(formData: FormData) {
 }
 
 export async function updateClient(id: string, formData: FormData) {
-  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'موظف استقبال', 'admin', 'reservation_manager', 'receptionist']);
+  const user = await requirePermission("manage_clients");
   const name = formData.get("name") as string;
   const phone = formData.get("phone") as string;
   const nationalId = formData.get("nationalId") as string;
@@ -89,7 +89,7 @@ export async function updateClient(id: string, formData: FormData) {
 }
 
 export async function deleteClient(id: string) {
-  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'admin', 'reservation_manager']);
+  const user = await requirePermission("manage_clients");
   try {
     // FIX-BL-03: Archive instead of delete
     const hasReservations = await prisma.reservation.count({
@@ -122,7 +122,7 @@ export async function deleteClient(id: string) {
 // CHALET ACTIONS
 // ─────────────────────────────────────────────
 export async function addChalet(formData: FormData) {
-  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'admin', 'reservation_manager']);
+  const user = await requirePermission("manage_chalets");
   const id = formData.get("id") as string;
   const name = formData.get("name") as string;
   const type = formData.get("type") as string;
@@ -154,7 +154,7 @@ export async function addChalet(formData: FormData) {
 }
 
 export async function updateChalet(id: string, formData: FormData) {
-  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'admin', 'reservation_manager']);
+  const user = await requirePermission("manage_chalets");
   const name = formData.get("name") as string;
   const type = formData.get("type") as string;
   const pricePerNight = Number(formData.get("pricePerNight"));
@@ -186,7 +186,7 @@ export async function updateChalet(id: string, formData: FormData) {
 }
 
 export async function deleteChalet(id: string) {
-  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'admin', 'reservation_manager']);
+  const user = await requirePermission("manage_chalets");
   try {
     const old = await prisma.chalet.findUnique({ where: { id } });
     await prisma.chalet.delete({ where: { id } });
@@ -205,7 +205,7 @@ export async function deleteChalet(id: string) {
 // RESERVATION ACTIONS
 // ─────────────────────────────────────────────
 export async function addReservation(formData: FormData) {
-  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'موظف استقبال', 'admin', 'reservation_manager', 'receptionist']);
+  const user = await requirePermission("manage_reservations");
   const chaletId = formData.get("chaletId") as string;
   const clientId = formData.get("clientId") as string;
   const checkInStr = formData.get("checkIn") as string;
@@ -277,7 +277,7 @@ export async function addReservation(formData: FormData) {
 }
 
 export async function updateReservationStatus(id: string, status: string) {
-  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'موظف استقبال', 'admin', 'reservation_manager', 'receptionist']);
+  const user = await requirePermission("manage_reservations");
   try {
     const reservation = await prisma.reservation.findUnique({
       where: { id },
@@ -329,7 +329,7 @@ export async function updateReservationStatus(id: string, status: string) {
 // PAYMENT ACTIONS
 // ─────────────────────────────────────────────
 export async function addPayment(formData: FormData) {
-  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'محاسب', 'موظف استقبال', 'admin', 'reservation_manager', 'accountant', 'receptionist']);
+  const user = await requirePermission("create_payments");
   const reservationId = formData.get("reservationId") as string;
   const amount = Number(formData.get("amount"));
   const method = formData.get("method") as string;
@@ -399,7 +399,7 @@ export async function addPayment(formData: FormData) {
 // EXPENSE ACTIONS
 // ─────────────────────────────────────────────
 export async function addExpense(formData: FormData) {
-  const user = await requireRole(['مدير النظام', 'مدير الحجوزات', 'محاسب', 'admin', 'reservation_manager', 'accountant']);
+  const user = await requirePermission("manage_expenses");
   const type = formData.get("type") as string;
   const amount = Number(formData.get("amount"));
   const chaletId = formData.get("chaletId") as string;
@@ -436,7 +436,7 @@ export async function addExpense(formData: FormData) {
 // MAINTENANCE ACTIONS
 // ─────────────────────────────────────────────
 export async function addMaintenance(formData: FormData) {
-  const user = await requireRole(['مدير النظام', 'فني صيانة', 'admin', 'maintenance']);
+  const user = await requirePermission("manage_maintenance");
   const chaletId = formData.get("chaletId") as string;
   const type = formData.get("type") as string;
   const cost = Number(formData.get("cost"));
@@ -489,7 +489,7 @@ export async function addMaintenance(formData: FormData) {
 }
 
 export async function completeMaintenance(id: string) {
-  const user = await requireRole(['مدير النظام', 'فني صيانة', 'admin', 'maintenance']);
+  const user = await requirePermission("manage_maintenance");
   try {
     const maintenance = await prisma.maintenance.findUnique({ where: { id } });
     if (!maintenance) return { error: "الطلب غير موجود" };
@@ -520,7 +520,7 @@ export async function completeMaintenance(id: string) {
 }
 
 export async function deleteMaintenance(id: string) {
-  const user = await requireRole(['مدير النظام', 'فني صيانة', 'admin', 'maintenance']);
+  const user = await requirePermission("manage_maintenance");
   try {
     const maintenance = await prisma.maintenance.findUnique({
       where: { id },
@@ -562,7 +562,7 @@ export async function deleteMaintenance(id: string) {
 // USER ACTIONS
 // ─────────────────────────────────────────────
 export async function addUser(formData: FormData) {
-  const userSession = await requireRole(['مدير النظام', 'admin']);
+  const userSession = await requirePermission("manage_users");
   const name = formData.get("name") as string;
   const username = formData.get("username") as string;
   const password = formData.get("password") as string;
@@ -576,6 +576,7 @@ export async function addUser(formData: FormData) {
   if (!vPass.valid) return { error: vPass.message };
 
   if (!role) return { error: "جميع الحقول مطلوبة" };
+  if (role === 'admin') return { error: "لا يمكن إضافة أكثر من مدير عام في النظام" };
 
   const roleMap: Record<string, string> = {
     admin: "مدير النظام",
@@ -589,7 +590,7 @@ export async function addUser(formData: FormData) {
     const hashedPassword = await bcrypt.hash(password, 12);
     const ref = await generateRefNumber('USR', prisma);
     const user = await prisma.user.create({
-      data: { name, username, password: hashedPassword, role, roleAr: roleMap[role] || role, active: true, ref_number: ref },
+      data: { name, username, password: hashedPassword, role, roleAr: roleMap[role] || role, active: true, ref_number: ref, mustChangePassword: true },
     });
     await logAction({ userId: userSession.id, action: "إنشاء مستخدم", table: "User", recordId: user.id });
 
@@ -602,7 +603,7 @@ export async function addUser(formData: FormData) {
 }
 
 export async function updateUser(id: string, formData: FormData) {
-  const userSession = await requireRole(['مدير النظام', 'admin']);
+  const userSession = await requirePermission("manage_users");
   const name = formData.get("name") as string;
   const role = formData.get("role") as string;
 
@@ -633,7 +634,7 @@ export async function updateUser(id: string, formData: FormData) {
 }
 
 export async function toggleUserStatus(id: string, active: boolean) {
-  const userSession = await requireRole(['مدير النظام', 'admin']);
+  const userSession = await requirePermission("manage_users");
   try {
     const user = await prisma.user.update({ where: { id }, data: { active: !active } });
     await logAction({ userId: userSession.id, action: "تغيير حالة المستخدم", table: "User", recordId: id, newValue: user });
@@ -646,7 +647,7 @@ export async function toggleUserStatus(id: string, active: boolean) {
 }
 
 export async function deleteUser(id: string) {
-  const userSession = await requireRole(['مدير النظام', 'admin']);
+  const userSession = await requirePermission("manage_users");
   try {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) return { error: "المستخدم غير موجود" };
@@ -677,7 +678,7 @@ export async function deleteUser(id: string) {
 // PROFIT REPORT
 // ─────────────────────────────────────────────
 export async function getProfitReport(startDate: Date, endDate: Date, chaletId?: string) {
-  await requireRole(['مدير النظام', 'مدير الحجوزات', 'محاسب', 'admin', 'reservation_manager', 'accountant']);
+  await requirePermission("view_profit_analysis");
   
   const revenueFilter = {
     revenue_date: { gte: startDate, lte: endDate },
@@ -711,4 +712,74 @@ export async function getProfitReport(startDate: Date, endDate: Date, chaletId?:
       ? ((revenue - expense) / revenue * 100).toFixed(2) + "%"
       : "0%"
   };
+}
+
+// ─────────────────────────────────────────────
+// PASSWORD MANAGEMENT
+// ─────────────────────────────────────────────
+export async function resetUserPassword(id: string, formData: FormData) {
+  const userSession = await requirePermission("manage_users");
+  const newPassword = formData.get("newPassword") as string;
+  
+  const vPass = validatePassword(newPassword);
+  if (!vPass.valid) return { error: vPass.message };
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return { error: "المستخدم غير موجود" };
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword, mustChangePassword: true }
+    });
+
+    await logAction({ userId: userSession.id, action: "إعادة تعيين كلمة المرور", table: "User", recordId: id });
+    
+    return { success: true };
+  } catch (e) {
+    return { error: "حدث خطأ أثناء المعالجة" };
+  }
+}
+
+import { cookies } from "next/headers";
+
+export async function changeMyPassword(id: string, formData: FormData) {
+  const newPassword = formData.get("newPassword") as string;
+  
+  const vPass = validatePassword(newPassword);
+  if (!vPass.valid) return { error: vPass.message };
+
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    
+    await prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword, mustChangePassword: false }
+    });
+
+    // Logging without session (or with existing session if available)
+    await logAction({ userId: id, action: "تغيير كلمة المرور إجبارياً", table: "User", recordId: id });
+    
+    // Update cookie so they don't have to log in again
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get("session_token")?.value;
+    if (sessionToken) {
+      const sessionData = JSON.parse(Buffer.from(sessionToken, "base64").toString("utf-8"));
+      sessionData.mustChangePassword = false;
+      const token = Buffer.from(JSON.stringify(sessionData)).toString("base64");
+      cookieStore.set("session_token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 8,
+        path: "/",
+      });
+    }
+
+    return { success: true };
+  } catch (e) {
+    return { error: "حدث خطأ أثناء تحديث كلمة المرور" };
+  }
 }

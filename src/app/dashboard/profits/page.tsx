@@ -3,7 +3,10 @@ import { LineChart, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
+import { requirePermission } from "@/lib/auth";
+
 export default async function ProfitsPage() {
+  await requirePermission("view_profit_analysis");
   const [payments, expenses, reservations] = await Promise.all([
     prisma.payment.findMany({ select: { amount: true, date: true } }),
     prisma.expense.findMany({ select: { amount: true, date: true } }),

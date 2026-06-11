@@ -6,21 +6,13 @@ import AddUserForm from "@/components/AddUserForm";
 import EditUserForm from "@/components/EditUserForm";
 import ToggleUserStatusButton from "@/components/ToggleUserStatusButton";
 import DeleteUserButton from "@/components/DeleteUserButton";
-
+import ResetUserPasswordButton from "@/components/ResetUserPasswordButton";
 export const dynamic = 'force-dynamic';
 
+import { requirePermission } from "@/lib/auth";
+
 export default async function UsersPage() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("session_token")?.value;
-  let currentUser = null;
-  
-  if (sessionCookie) {
-    try {
-      currentUser = JSON.parse(Buffer.from(sessionCookie, "base64").toString("utf-8"));
-    } catch (e) {
-      // Ignore
-    }
-  }
+  const currentUser = await requirePermission("manage_users");
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: 'desc' }
@@ -69,6 +61,7 @@ export default async function UsersPage() {
                   <td className="px-6 py-4">
                     {currentUser?.username !== u.username ? (
                       <div className="flex gap-2">
+                        <ResetUserPasswordButton id={u.id} username={u.username} />
                         <EditUserForm user={{ id: u.id, name: u.name, role: u.role }} />
                         <ToggleUserStatusButton id={u.id} active={u.active} />
                         <DeleteUserButton id={u.id} username={u.username} />

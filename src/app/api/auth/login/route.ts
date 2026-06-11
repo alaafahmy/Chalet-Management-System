@@ -33,8 +33,8 @@ export async function POST(request: Request) {
     }
 
     const sessionData = user
-      ? { id: user.id, name: user.name, username: user.username, role: user.role, roleAr: user.roleAr }
-      : { id: "admin", name: "المدير العام", username: "admin", role: "admin", roleAr: "مدير النظام" };
+      ? { id: user.id, name: user.name, username: user.username, role: user.role, roleAr: user.roleAr, mustChangePassword: user.mustChangePassword }
+      : { id: "admin", name: "المدير العام", username: "admin", role: "admin", roleAr: "مدير النظام", mustChangePassword: false };
 
     // إنشاء token بسيط (في الإنتاج يجب استخدام JWT)
     const token = Buffer.from(JSON.stringify(sessionData)).toString("base64");

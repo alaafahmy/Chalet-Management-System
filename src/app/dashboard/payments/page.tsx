@@ -6,7 +6,13 @@ import PrintReceiptButton from "@/components/PrintReceiptButton";
 
 export const dynamic = 'force-dynamic';
 
+import { requirePermission } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
+
 export default async function PaymentsPage() {
+  const user = await requirePermission("view_payments");
+  const canCreate = hasPermission(user.role, "create_payments");
+
   const payments = await prisma.payment.findMany({
     include: {
       reservation: {
@@ -55,7 +61,7 @@ export default async function PaymentsPage() {
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
           <span className="bg-emerald-500/20 text-emerald-500 p-2 rounded-lg"><Receipt size={24} /></span> المدفوعات (سندات القبض)
         </h2>
-        <AddPaymentForm reservations={reservationOptions} />
+        {canCreate && <AddPaymentForm reservations={reservationOptions} />}
       </div>
 
       <div className="glass-panel overflow-hidden">

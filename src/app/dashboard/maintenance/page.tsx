@@ -7,7 +7,13 @@ import DeleteMaintenanceButton from "@/components/DeleteMaintenanceButton";
 
 export const dynamic = 'force-dynamic';
 
+import { requirePermission } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
+
 export default async function MaintenancePage() {
+  const user = await requirePermission("view_maintenance");
+  const canManage = hasPermission(user.role, "manage_maintenance");
+
   const maintenances = await prisma.maintenance.findMany({
     include: { chalet: true },
     orderBy: { date: 'desc' }
@@ -28,7 +34,7 @@ export default async function MaintenancePage() {
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
           <span className="bg-orange-500/20 text-orange-500 p-2 rounded-lg"><Wrench size={24} /></span> إدارة الصيانة
         </h2>
-        <AddMaintenanceForm chalets={chalets} />
+        {canManage && <AddMaintenanceForm chalets={chalets} />}
       </div>
 
       {/* Summary */}
@@ -54,7 +60,7 @@ export default async function MaintenancePage() {
                 <th className="px-6 py-4 font-bold">تاريخ الطلب</th>
                 <th className="px-6 py-4 font-bold">تاريخ الانتهاء</th>
                 <th className="px-6 py-4 font-bold">الحالة</th>
-                <th className="px-6 py-4 font-bold">إجراءات</th>
+                {canManage && <th className="px-6 py-4 font-bold">إجراءات</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border-subtle)] text-[#f5f5f5]">
@@ -73,14 +79,16 @@ export default async function MaintenancePage() {
                       <span className="bg-orange-500/20 text-orange-500 px-3 py-1 rounded-full text-xs font-bold border border-orange-500/30">جارية</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      {m.status === 'جارية' && (
-                        <CompleteMaintenanceButton id={m.id} />
-                      )}
-                      <DeleteMaintenanceButton id={m.id} />
-                    </div>
-                  </td>
+                  {canManage && (
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2">
+                        {m.status === 'جارية' && (
+                          <CompleteMaintenanceButton id={m.id} />
+                        )}
+                        <DeleteMaintenanceButton id={m.id} />
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
               

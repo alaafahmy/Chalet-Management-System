@@ -4,7 +4,10 @@ import { formatRefID } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
+import { requirePermission } from "@/lib/auth";
+
 export default async function RevenuePage() {
+  await requirePermission("view_financial_reports");
   const payments = await prisma.payment.findMany({
     include: {
       reservation: {

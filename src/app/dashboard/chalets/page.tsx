@@ -6,7 +6,13 @@ import DeleteChaletButton from "@/components/DeleteChaletButton";
 
 export const dynamic = 'force-dynamic';
 
+import { requirePermission } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
+
 export default async function ChaletsPage() {
+  const user = await requirePermission("view_chalets");
+  const canManage = hasPermission(user.role, "manage_chalets");
+
   const chalets = await prisma.chalet.findMany({
     orderBy: { createdAt: 'desc' }
   });
@@ -44,7 +50,7 @@ export default async function ChaletsPage() {
         <h2 className="text-2xl font-bold text-white flex items-center gap-3">
           <span className="bg-[#d4a853]/20 text-[#d4a853] p-2 rounded-lg"><Home size={24} /></span> إدارة الشاليهات
         </h2>
-        <AddChaletForm />
+        {canManage && <AddChaletForm />}
       </div>
 
       {/* Grid */}
@@ -81,10 +87,12 @@ export default async function ChaletsPage() {
               </div>
             </div>
 
-            <div className="mt-auto border-t border-[var(--color-border-subtle)] bg-[var(--color-bg-base)]/30 p-4 flex justify-end gap-2">
-              <EditChaletForm chalet={c} />
-              <DeleteChaletButton id={c.id} name={c.name} />
-            </div>
+            {canManage && (
+              <div className="mt-auto border-t border-[var(--color-border-subtle)] bg-[var(--color-bg-base)]/30 p-4 flex justify-end gap-2">
+                <EditChaletForm chalet={c} />
+                <DeleteChaletButton id={c.id} name={c.name} />
+              </div>
+            )}
           </div>
         ))}
 

@@ -15,8 +15,9 @@ model User {
   password     String        // In a real app, this should be hashed
   role         String        @default("استقبال") // 'admin', 'reservation_manager', 'accountant', 'receptionist', 'maintenance'
   roleAr       String        // Arabic role name
-  active       Boolean       @default(true)
-  ref_number   String        @unique @default(cuid())
+  active             Boolean       @default(true)
+  mustChangePassword Boolean       @default(false)
+  ref_number         String        @unique @default(cuid())
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 

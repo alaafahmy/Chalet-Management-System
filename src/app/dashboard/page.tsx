@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { Home, ClipboardList, Users, TrendingUp, TrendingDown, LineChart, Wrench, AlertTriangle } from "lucide-react";
 
+import { requireAuth } from "@/lib/auth";
+
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
+  await requireAuth();
   const [
     chaletsCount,
     activeReservationsCount,

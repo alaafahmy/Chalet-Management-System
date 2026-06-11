@@ -20,23 +20,34 @@ import {
   X
 } from "lucide-react";
 
-export default function Sidebar() {
+import { hasPermission, Permission } from "@/lib/permissions";
+
+export default function Sidebar({ userRole }: { userRole?: string }) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
-  const links = [
+  // Helper function to check if the link should be shown
+  const checkAccess = (permission?: Permission) => {
+    if (!permission) return true; // Everyone can access
+    if (!userRole) return false;
+    return hasPermission(userRole, permission);
+  };
+
+  const allLinks = [
     { name: "الرئيسية", href: "/dashboard", icon: LayoutDashboard },
-    { name: "التقويم التفاعلي", href: "/dashboard/calendar", icon: Calendar },
-    { name: "إدارة الشاليهات", href: "/dashboard/chalets", icon: Home },
-    { name: "إدارة العملاء", href: "/dashboard/clients", icon: Users },
-    { name: "الحجوزات", href: "/dashboard/reservations", icon: ClipboardList },
-    { name: "المدفوعات", href: "/dashboard/payments", icon: CreditCard },
-    { name: "الإيرادات", href: "/dashboard/revenue", icon: TrendingUp },
-    { name: "المصروفات", href: "/dashboard/expenses", icon: TrendingDown },
-    { name: "الأرباح", href: "/dashboard/profits", icon: LineChart },
-    { name: "الصيانة", href: "/dashboard/maintenance", icon: Wrench },
-    { name: "المستخدمين", href: "/dashboard/users", icon: UserCog },
+    { name: "التقويم التفاعلي", href: "/dashboard/calendar", icon: Calendar, requiredPermission: "view_reservations" as Permission },
+    { name: "إدارة الشاليهات", href: "/dashboard/chalets", icon: Home, requiredPermission: "view_chalets" as Permission },
+    { name: "إدارة العملاء", href: "/dashboard/clients", icon: Users, requiredPermission: "view_clients" as Permission },
+    { name: "الحجوزات", href: "/dashboard/reservations", icon: ClipboardList, requiredPermission: "view_reservations" as Permission },
+    { name: "المدفوعات", href: "/dashboard/payments", icon: CreditCard, requiredPermission: "view_payments" as Permission },
+    { name: "الإيرادات", href: "/dashboard/revenue", icon: TrendingUp, requiredPermission: "view_financial_reports" as Permission },
+    { name: "المصروفات", href: "/dashboard/expenses", icon: TrendingDown, requiredPermission: "manage_expenses" as Permission },
+    { name: "الأرباح", href: "/dashboard/profits", icon: LineChart, requiredPermission: "view_profit_analysis" as Permission },
+    { name: "الصيانة", href: "/dashboard/maintenance", icon: Wrench, requiredPermission: "view_maintenance" as Permission },
+    { name: "المستخدمين", href: "/dashboard/users", icon: UserCog, requiredPermission: "manage_users" as Permission },
   ];
+
+  const links = allLinks.filter(link => checkAccess(link.requiredPermission));
 
   return (
     <>

@@ -7,7 +7,10 @@ import ReservationDetailsButton from "@/components/ReservationDetailsButton";
 
 export const dynamic = 'force-dynamic';
 
+import { requirePermission } from "@/lib/auth";
+
 export default async function ReservationsPage() {
+  await requirePermission("view_reservations");
   const reservations = await prisma.reservation.findMany({
     include: {
       client: true,

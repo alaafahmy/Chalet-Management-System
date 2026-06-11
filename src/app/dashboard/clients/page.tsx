@@ -5,7 +5,10 @@ import ClientList from "@/components/ClientList";
 
 export const dynamic = 'force-dynamic';
 
+import { requirePermission } from "@/lib/auth";
+
 export default async function ClientsPage() {
+  await requirePermission("view_clients");
   const clients = await prisma.client.findMany({
     include: {
       _count: {

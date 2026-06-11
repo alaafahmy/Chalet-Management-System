@@ -5,7 +5,10 @@ import AddExpenseForm from "@/components/AddExpenseForm";
 
 export const dynamic = 'force-dynamic';
 
+import { requirePermission } from "@/lib/auth";
+
 export default async function ExpensesPage() {
+  await requirePermission("manage_expenses");
   const expenses = await prisma.expense.findMany({
     include: { chalet: true, maintenance: true },
     orderBy: { date: 'desc' }

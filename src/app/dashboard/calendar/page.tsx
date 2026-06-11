@@ -3,7 +3,10 @@ import { ChevronRight, ChevronLeft, Calendar as CalendarIcon } from "lucide-reac
 
 export const dynamic = 'force-dynamic';
 
+import { requirePermission } from "@/lib/auth";
+
 export default async function CalendarPage() {
+  await requirePermission("view_reservations");
   const chalets = await prisma.chalet.findMany();
   const reservations = await prisma.reservation.findMany({
     where: {
