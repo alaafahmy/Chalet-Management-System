@@ -92,7 +92,19 @@ export async function updateClient(id: string, formData: FormData) {
 export async function deleteClient(id: string) {
   const user = await requirePermission("manage_clients");
   try {
-    // FIX-BL-03: Archive instead of delete
+    // التحقق من وجود حجوزات نشطة
+    const activeReservations = await prisma.reservation.count({
+      where: { 
+        clientId: id,
+        status: { in: ["مؤكد", "معلق"] }
+      }
+    });
+
+    if (activeReservations > 0) {
+      return { error: "لا يمكن حذف أو أرشفة العميل لوجود حجوزات نشطة لديه. يرجى إنهاء الحجوزات أو إلغائها أولاً." };
+    }
+
+    // FIX-BL-03: Archive instead of delete if there are historical reservations
     const hasReservations = await prisma.reservation.count({
       where: { clientId: id }
     });
