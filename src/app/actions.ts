@@ -239,9 +239,10 @@ export async function addReservation(formData: FormData) {
 
     const chalet = await prisma.chalet.findUnique({
       where: { id: chaletId },
-      select: { pricePerNight: true }
+      select: { pricePerNight: true, status: true }
     });
     if (!chalet) return { error: "الشاليه غير موجود" };
+    if (chalet.status === "تحت الصيانة") return { error: "عذراً! هذا الشاليه تحت الصيانة ولا يمكن حجزه حالياً." };
 
     const totalCost = customTotal;
     const pricePerNight = totalCost / nights;
@@ -446,9 +447,10 @@ export async function updateReservationDetails(formData: FormData) {
 
     const chalet = await prisma.chalet.findUnique({
       where: { id: chaletId },
-      select: { pricePerNight: true }
+      select: { pricePerNight: true, status: true }
     });
     if (!chalet) return { error: "الشاليه غير موجود" };
+    if (chalet.status === "تحت الصيانة") return { error: "عذراً! هذا الشاليه تحت الصيانة ولا يمكن حجزه حالياً." };
 
     const totalCost = customTotal;
     const pricePerNight = totalCost / nights;

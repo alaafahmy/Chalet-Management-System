@@ -6,7 +6,7 @@ import { updateReservationDetails } from "@/app/actions";
 import { validateAmount, validateDateRange } from "@/lib/validation";
 
 type Client = { id: string; name: string };
-type Chalet = { id: string; name: string; pricePerNight: number };
+type Chalet = { id: string; name: string; pricePerNight: number; status?: string };
 
 interface ReservationData {
   id: string;
@@ -163,7 +163,11 @@ export default function EditReservationForm({ reservation, clients, chalets }: {
                     className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-subtle)] rounded-lg p-3 text-white focus:outline-none focus:border-[#d4a853]"
                   >
                     <option value="">اختر الشاليه...</option>
-                    {chalets.map(c => <option key={c.id} value={c.id}>{c.name} ({c.pricePerNight} ر.س/ليلة)</option>)}
+                    {chalets.map(c => (
+                      <option key={c.id} value={c.id} disabled={c.status === "تحت الصيانة" && reservation.chaletId !== c.id}>
+                        {c.name} ({c.pricePerNight} ر.س/ليلة) {c.status === "تحت الصيانة" && reservation.chaletId !== c.id ? "- 🛠️ تحت الصيانة" : ""}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

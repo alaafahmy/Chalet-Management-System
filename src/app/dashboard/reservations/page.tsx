@@ -25,7 +25,7 @@ export default async function ReservationsPage() {
   });
 
   const clients = await prisma.client.findMany({ select: { id: true, name: true } });
-  const chalets = await prisma.chalet.findMany({ select: { id: true, name: true, pricePerNight: true } });
+  const chalets = await prisma.chalet.findMany({ select: { id: true, name: true, pricePerNight: true, status: true } });
 
   const getStatusBadge = (status: string) => {
     switch (status) {

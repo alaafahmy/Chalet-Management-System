@@ -6,7 +6,7 @@ import { addReservation } from "@/app/actions";
 import { validateAmount, validateDateRange } from "@/lib/validation";
 
 type Client = { id: string; name: string };
-type Chalet = { id: string; name: string; pricePerNight: number };
+type Chalet = { id: string; name: string; pricePerNight: number; status?: string };
 
 export default function AddReservationForm({ clients, chalets }: { clients: Client[], chalets: Chalet[] }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -136,7 +136,11 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
                     className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-subtle)] rounded-lg p-3 text-white focus:outline-none focus:border-[#d4a853]"
                   >
                     <option value="">اختر الشاليه...</option>
-                    {chalets.map(c => <option key={c.id} value={c.id}>{c.name} ({c.pricePerNight} ر.س/ليلة)</option>)}
+                    {chalets.map(c => (
+                      <option key={c.id} value={c.id} disabled={c.status === "تحت الصيانة"}>
+                        {c.name} ({c.pricePerNight} ر.س/ليلة) {c.status === "تحت الصيانة" ? "- 🛠️ تحت الصيانة" : ""}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
