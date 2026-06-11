@@ -29,12 +29,29 @@ export default function PrintReceiptButton({ payment }: { payment: any }) {
                   <FileText size={24} /> سند قبض: <span className="text-white">{payment.ref_number}</span>
                 </h2>
               </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="p-2 text-[#8b92a5] hover:text-white bg-[var(--color-bg-input)] rounded-full transition-colors"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-3 print:hidden">
+                <button
+                  onClick={() => {
+                     const printContents = document.getElementById(`receipt-${payment.id}`)?.innerHTML;
+                     const originalContents = document.body.innerHTML;
+                     if(printContents) {
+                        document.body.innerHTML = printContents;
+                        window.print();
+                        document.body.innerHTML = originalContents;
+                        window.location.reload();
+                     }
+                  }}
+                  className="bg-[#d4a853] text-[#06080d] px-4 py-2 rounded-lg font-bold hover:brightness-110 transition-all flex items-center gap-2"
+                >
+                  <Printer size={18} /> طباعة
+                </button>
+                <button
+                  onClick={() => setOpen(false)}
+                  className="p-2 text-[#8b92a5] hover:text-white bg-[var(--color-bg-input)] rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Body */}
@@ -86,24 +103,6 @@ export default function PrintReceiptButton({ payment }: { payment: any }) {
               </div>
             </div>
 
-            {/* Print Action */}
-            <div className="absolute top-4 left-4 flex items-center print:hidden">
-                <button
-                  onClick={() => {
-                     const printContents = document.getElementById(`receipt-${payment.id}`)?.innerHTML;
-                     const originalContents = document.body.innerHTML;
-                     if(printContents) {
-                        document.body.innerHTML = printContents;
-                        window.print();
-                        document.body.innerHTML = originalContents;
-                        window.location.reload();
-                     }
-                  }}
-                  className="bg-[#d4a853] text-[#06080d] px-4 py-2 rounded-lg font-bold hover:brightness-110 transition-all flex items-center gap-2"
-                >
-                  <Printer size={18} /> طباعة
-                </button>
-            </div>
           </div>
         </div>
       )}
