@@ -14,15 +14,18 @@ interface ReservationData {
   chaletId: string;
   checkIn: Date;
   checkOut: Date;
+  discount: number;
   totalCost: number;
   notes: string | null;
   status: string;
 }
 
-export default function EditReservationForm({ reservation, clients, chalets }: { reservation: ReservationData, clients: Client[], chalets: Chalet[] }) {
+export default function EditReservationForm({ reservation, clients, chalets, userRole }: { reservation: ReservationData, clients: Client[], chalets: Chalet[], userRole: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const maxDiscount = (userRole === "admin" || userRole === "reservation_manager") ? 100 : 20;
 
   // Form State
   const [clientId, setClientId] = useState(reservation.clientId);
@@ -32,7 +35,9 @@ export default function EditReservationForm({ reservation, clients, chalets }: {
   
   const [checkIn, setCheckIn] = useState(formatDateForInput(reservation.checkIn));
   const [checkOut, setCheckOut] = useState(formatDateForInput(reservation.checkOut));
+  const [discount, setDiscount] = useState((reservation.discount || 0).toString());
   const [totalPrice, setTotalPrice] = useState(reservation.totalCost.toString());
+  const [originalPrice, setOriginalPrice] = useState(0);
   const [notes, setNotes] = useState(reservation.notes || "");
 
   // Errors State
@@ -45,8 +50,19 @@ export default function EditReservationForm({ reservation, clients, chalets }: {
       setChaletId(reservation.chaletId);
       setCheckIn(formatDateForInput(reservation.checkIn));
       setCheckOut(formatDateForInput(reservation.checkOut));
+      setDiscount((reservation.discount || 0).toString());
       setTotalPrice(reservation.totalCost.toString());
       setNotes(reservation.notes || "");
+      
+      // Calculate original price roughly
+      const inD = new Date(reservation.checkIn);
+      const outD = new Date(reservation.checkOut);
+      const nights = Math.max(1, Math.ceil((outD.getTime() - inD.getTime()) / (1000 * 60 * 60 * 24)));
+      const ch = chalets.find(c => c.id === reservation.chaletId);
+      if (ch) {
+        setOriginalPrice(ch.pricePerNight * nights);
+      }
+
       setError(null);
       setDateError("");
       setPriceError("");
@@ -75,11 +91,7 @@ export default function EditReservationForm({ reservation, clients, chalets }: {
     return valid;
   }
 
-  function handleDateChange(inDate: string, outDate: string, chId: string) {
-    setCheckIn(inDate);
-    setCheckOut(outDate);
-    setChaletId(chId);
-
+  function recalculateTotal(inDate: string, outDate: string, chId: string, disc: string) {
     if (inDate && outDate && chId) {
       const inD = new Date(inDate);
       const outD = new Date(outDate);
@@ -87,10 +99,33 @@ export default function EditReservationForm({ reservation, clients, chalets }: {
         const nights = Math.ceil((outD.getTime() - inD.getTime()) / (1000 * 60 * 60 * 24));
         const ch = chalets.find(c => c.id === chId);
         if (ch) {
-          setTotalPrice((ch.pricePerNight * nights).toString());
+          const basePrice = ch.pricePerNight * nights;
+          setOriginalPrice(basePrice);
+          const dVal = parseFloat(disc) || 0;
+          const finalPrice = Math.max(0, basePrice - (basePrice * dVal / 100));
+          setTotalPrice(finalPrice.toString());
+          return;
         }
       }
     }
+    setOriginalPrice(0);
+    setTotalPrice("");
+  }
+
+  function handleDateChange(inDate: string, outDate: string, chId: string) {
+    setCheckIn(inDate);
+    setCheckOut(outDate);
+    setChaletId(chId);
+    recalculateTotal(inDate, outDate, chId, discount);
+  }
+
+  function handleDiscountChange(val: string) {
+    let dVal = parseFloat(val) || 0;
+    if (dVal > maxDiscount) dVal = maxDiscount;
+    if (dVal < 0) dVal = 0;
+    const strVal = val === "" ? "" : dVal.toString();
+    setDiscount(strVal);
+    recalculateTotal(checkIn, checkOut, chaletId, strVal);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -106,6 +141,7 @@ export default function EditReservationForm({ reservation, clients, chalets }: {
     formData.append("checkIn", checkIn);
     formData.append("checkOut", checkOut);
     formData.append("totalPrice", totalPrice);
+    formData.append("discount", discount || "0");
     formData.append("notes", notes);
 
     const res = await updateReservationDetails(formData);
@@ -216,24 +252,37 @@ export default function EditReservationForm({ reservation, clients, chalets }: {
               </div>
               {dateError && <p className="text-red-400 text-xs mt-1">{dateError}</p>}
 
-              <div>
-                <label className="block text-sm text-[#8b92a5] mb-1">إجمالي المبلغ المطلوب (ر.س) <span className="text-red-500">*</span></label>
-                <input 
-                  type="number" 
-                  value={totalPrice}
-                  onChange={(e) => {
-                    setTotalPrice(e.target.value);
-                    if (priceError) setPriceError("");
-                  }}
-                  onBlur={() => {
-                    const check = validateAmount(Number(totalPrice), "المبلغ الإجمالي");
-                    if (!check.valid) setPriceError(check.message!);
-                  }}
-                  required 
-                  min="1"
-                  className={`w-full bg-[var(--color-bg-input)] border ${priceError ? 'border-red-500' : 'border-[var(--color-border-subtle)]'} rounded-lg p-3 text-white focus:outline-none focus:border-[#d4a853]`} 
-                />
-                {priceError && <p className="text-red-400 text-xs mt-1">{priceError}</p>}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-[#8b92a5] mb-1">نسبة الخصم (%)</label>
+                  <input 
+                    type="number" 
+                    value={discount}
+                    onChange={(e) => handleDiscountChange(e.target.value)}
+                    min="0"
+                    max={maxDiscount}
+                    className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border-subtle)] rounded-lg p-3 text-white focus:outline-none focus:border-[#d4a853]" 
+                    placeholder={`الحد الأقصى ${maxDiscount}%`} 
+                  />
+                  <p className="text-[10px] text-[#8b92a5] mt-1">
+                    الحد الأقصى المسموح لك: {maxDiscount}%
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm text-[#8b92a5] mb-1">الإجمالي (ر.س) <span className="text-red-500">*</span></label>
+                  <input 
+                    type="number" 
+                    value={totalPrice}
+                    readOnly
+                    className="w-full bg-[var(--color-bg-input)]/50 border border-[var(--color-border-subtle)] rounded-lg p-3 text-[#cacedb] cursor-not-allowed" 
+                  />
+                  {originalPrice > 0 && parseFloat(discount) > 0 && (
+                    <p className="text-[10px] text-emerald-400 mt-1 line-through opacity-70">
+                      السعر قبل الخصم: {originalPrice} ر.س
+                    </p>
+                  )}
+                  {priceError && <p className="text-red-400 text-xs mt-1">{priceError}</p>}
+                </div>
               </div>
 
               <div>

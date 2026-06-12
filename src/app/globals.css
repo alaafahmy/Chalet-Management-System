@@ -115,6 +115,16 @@ body {
   background: var(--color-brand-primary);
 }
 
+/* Global Select & Option styling to fix white dropdowns on Windows */
+select {
+  color-scheme: dark;
+}
+
+option {
+  background-color: var(--color-ui-bg-base);
+  color: var(--color-ui-text-primary);
+}
+
 /* Animation Utilities */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }

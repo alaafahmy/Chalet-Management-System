@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Lock, User, Palmtree } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -77,13 +77,13 @@ export default function LoginPage() {
         <div className="absolute bottom-[-50px] right-[-50px] w-[150px] h-[150px] bg-[#3b82f6] rounded-full blur-[80px] opacity-10 pointer-events-none" />
 
         {/* Top Right Logo & System Name */}
-        <div className="absolute top-8 right-8 flex items-center gap-3 z-10 animate-fade-in">
-          <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-brand-light)] to-[var(--color-brand-dark)] rounded-xl flex items-center justify-center shadow-lg shadow-[var(--color-brand-glow)]">
-            <span className="text-lg">🏖️</span>
+        <div className="absolute top-8 right-8 flex items-center justify-start gap-3 z-10 animate-fade-in">
+          <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-brand-primary)] to-[var(--color-brand-dark)] rounded-xl flex items-center justify-center shadow-lg shadow-[var(--color-brand-glow)]">
+            <Palmtree className="text-white w-6 h-6" />
           </div>
-          <div>
+          <div className="text-right">
             <h1 className="text-sm font-bold text-white tracking-wide">نظام إدارة الشاليهات</h1>
-            <p className="text-[10px] text-[var(--color-ui-text-muted)] uppercase tracking-widest">Chalet System</p>
+            <p className="text-[10px] text-[var(--color-ui-text-muted)] uppercase tracking-widest">Alaa Soft</p>
           </div>
         </div>
 
@@ -177,6 +177,11 @@ export default function LoginPage() {
             للتجربة: admin / admin123
           </p>
         </form>
+      </div>
+
+      {/* Footer */}
+      <div className="absolute bottom-4 text-center text-[10px] text-white/30 tracking-widest uppercase animate-fade-in">
+        صنع بواسطة Alaa Soft
       </div>
     </div>
   );

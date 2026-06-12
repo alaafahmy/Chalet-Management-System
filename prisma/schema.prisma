@@ -73,6 +73,7 @@ model Reservation {
   checkOut      DateTime
   nights        Int
   pricePerNight Float
+  discount      Float     @default(0) // النسبة المئوية للخصم (0-100)
   totalCost     Float
   status        String    @default("معلق") // 'معلق', 'مؤكد', 'مكتمل', 'ملغي'
   notes         String?

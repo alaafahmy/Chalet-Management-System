@@ -15,7 +15,7 @@ export default async function CalendarPage({ searchParams }: Props) {
   const chalets = await prisma.chalet.findMany();
   const reservations = await prisma.reservation.findMany({
     where: {
-      status: { in: ['مؤكد', 'معلق'] }
+      status: { in: ['مؤكد', 'مكتمل'] }
     },
     include: { client: true }
   });
@@ -114,13 +114,11 @@ export default async function CalendarPage({ searchParams }: Props) {
                     let content = null;
 
                     if (res) {
-                      cellClass = res.status === 'مؤكد' 
-                        ? "border border-[var(--color-border-subtle)] h-16 bg-blue-500/20 relative group cursor-pointer"
-                        : "border border-[var(--color-border-subtle)] h-16 bg-orange-500/20 relative group cursor-pointer";
+                      cellClass = "border border-[var(--color-border-subtle)] h-16 bg-blue-500/20 relative group cursor-pointer";
                         
                       content = (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className={`w-full h-4/5 mx-1 rounded-md flex items-center justify-center text-xs font-bold text-white px-1 overflow-hidden whitespace-nowrap ${res.status === 'مؤكد' ? 'bg-blue-500/80 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-orange-500/80'}`}>
+                          <div className={`w-full h-4/5 mx-1 rounded-md flex items-center justify-center text-xs font-bold text-white px-1 overflow-hidden whitespace-nowrap bg-blue-500/80 shadow-[0_0_10px_rgba(59,130,246,0.5)]`}>
                             {res.client.name.split(' ')[0]}
                           </div>
                         </div>
@@ -151,11 +149,7 @@ export default async function CalendarPage({ searchParams }: Props) {
       <div className="flex gap-6 items-center pt-4">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded bg-blue-500/80"></div>
-          <span className="text-sm text-[#cacedb]">محجوز (مؤكد)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-orange-500/80"></div>
-          <span className="text-sm text-[#cacedb]">بانتظار التأكيد (معلق)</span>
+          <span className="text-sm text-[#cacedb]">محجوز (مؤكد/مكتمل)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded border border-[var(--color-border-subtle)]"></div>

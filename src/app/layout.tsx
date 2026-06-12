@@ -9,8 +9,8 @@ const tajawal = Tajawal({
 });
 
 export const metadata: Metadata = {
-  title: "نظام إدارة الشاليهات | Alaa & Ayman Team",
-  description: "Chalet Management System designed for Saudi Arabia",
+  title: "نظام إدارة الشاليهات | Alaa Soft",
+  description: "نظام متكامل لإدارة الشاليهات، الحجوزات، العملاء، والصيانة",
 };
 
 export default function RootLayout({

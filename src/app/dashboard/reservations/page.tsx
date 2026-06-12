@@ -63,7 +63,7 @@ export default async function ReservationsPage() {
         </h2>
         <div className="flex gap-3">
           {hasPermission(user.role, "export_reports") && <ExportButton type="reservations" chalets={chalets} />}
-          <AddReservationForm clients={clients} chalets={chalets} />
+          <AddReservationForm clients={clients} chalets={chalets} userRole={user.role} />
         </div>
       </div>
 
@@ -138,7 +138,7 @@ export default async function ReservationsPage() {
                       <div className="flex gap-2 items-center">
                         <ReservationDetailsButton reservation={r} />
                         {r.status !== 'ملغي' && r.status !== 'مكتمل' && (
-                          <EditReservationForm reservation={r} clients={clients} chalets={chalets} />
+                          <EditReservationForm reservation={r} clients={clients} chalets={chalets} userRole={user.role} />
                         )}
                         <ReservationActionButtons
                           id={r.id}

@@ -8,17 +8,21 @@ import { validateAmount, validateDateRange } from "@/lib/validation";
 type Client = { id: string; name: string };
 type Chalet = { id: string; name: string; pricePerNight: number; status?: string };
 
-export default function AddReservationForm({ clients, chalets }: { clients: Client[], chalets: Chalet[] }) {
+export default function AddReservationForm({ clients, chalets, userRole }: { clients: Client[], chalets: Chalet[], userRole: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const maxDiscount = (userRole === "admin" || userRole === "reservation_manager") ? 100 : 20;
 
   // Form State
   const [clientId, setClientId] = useState("");
   const [chaletId, setChaletId] = useState("");
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
+  const [discount, setDiscount] = useState("0");
   const [totalPrice, setTotalPrice] = useState("");
+  const [originalPrice, setOriginalPrice] = useState(0); // السعر قبل الخصم
   const [notes, setNotes] = useState("");
 
   // Errors State
@@ -48,11 +52,7 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
   }
 
   // Calculate suggested price
-  function handleDateChange(inDate: string, outDate: string, chId: string) {
-    setCheckIn(inDate);
-    setCheckOut(outDate);
-    setChaletId(chId);
-
+  function recalculateTotal(inDate: string, outDate: string, chId: string, disc: string) {
     if (inDate && outDate && chId) {
       const inD = new Date(inDate);
       const outD = new Date(outDate);
@@ -60,10 +60,33 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
         const nights = Math.ceil((outD.getTime() - inD.getTime()) / (1000 * 60 * 60 * 24));
         const ch = chalets.find(c => c.id === chId);
         if (ch) {
-          setTotalPrice((ch.pricePerNight * nights).toString());
+          const basePrice = ch.pricePerNight * nights;
+          setOriginalPrice(basePrice);
+          const dVal = parseFloat(disc) || 0;
+          const finalPrice = Math.max(0, basePrice - (basePrice * dVal / 100));
+          setTotalPrice(finalPrice.toString());
+          return;
         }
       }
     }
+    setOriginalPrice(0);
+    setTotalPrice("");
+  }
+
+  function handleDateChange(inDate: string, outDate: string, chId: string) {
+    setCheckIn(inDate);
+    setCheckOut(outDate);
+    setChaletId(chId);
+    recalculateTotal(inDate, outDate, chId, discount);
+  }
+
+  function handleDiscountChange(val: string) {
+    let dVal = parseFloat(val) || 0;
+    if (dVal > maxDiscount) dVal = maxDiscount;
+    if (dVal < 0) dVal = 0;
+    const strVal = val === "" ? "" : dVal.toString();
+    setDiscount(strVal);
+    recalculateTotal(checkIn, checkOut, chaletId, strVal);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -79,6 +102,7 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
     formData.append("checkIn", checkIn);
     formData.append("checkOut", checkOut);
     formData.append("totalPrice", totalPrice);
+    formData.append("discount", discount || "0");
     formData.append("notes", notes);
 
     const res = await addReservation(formData);
@@ -87,7 +111,7 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
       setError(res.error);
     } else {
       setIsOpen(false);
-      setClientId(""); setChaletId(""); setCheckIn(""); setCheckOut(""); setTotalPrice(""); setNotes("");
+      setClientId(""); setChaletId(""); setCheckIn(""); setCheckOut(""); setDiscount("0"); setTotalPrice(""); setNotes("");
     }
   }
 
@@ -189,25 +213,38 @@ export default function AddReservationForm({ clients, chalets }: { clients: Clie
               </div>
               {dateError && <p className="text-red-400 text-xs mt-1">{dateError}</p>}
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-ui-text-secondary)] mb-2">إجمالي المبلغ المطلوب (ر.س) <span className="text-red-500">*</span></label>
-                <input 
-                  type="number" 
-                  value={totalPrice}
-                  onChange={(e) => {
-                    setTotalPrice(e.target.value);
-                    if (priceError) setPriceError("");
-                  }}
-                  onBlur={() => {
-                    const check = validateAmount(Number(totalPrice), "المبلغ الإجمالي");
-                    if (!check.valid) setPriceError(check.message!);
-                  }}
-                  required 
-                  min="1"
-                  className={`w-full glass-input p-3.5 ${priceError ? '!border-red-500 !shadow-[0_0_0_1px_rgba(239,68,68,0.2)]' : ''}`} 
-                  placeholder="مثال: 3000" 
-                />
-                {priceError && <p className="text-red-400 text-xs mt-1">{priceError}</p>}
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-ui-text-secondary)] mb-2">نسبة الخصم (%)</label>
+                  <input 
+                    type="number" 
+                    value={discount}
+                    onChange={(e) => handleDiscountChange(e.target.value)}
+                    min="0"
+                    max={maxDiscount}
+                    className="w-full glass-input p-3.5" 
+                    placeholder={`الحد الأقصى ${maxDiscount}%`} 
+                  />
+                  <p className="text-[10px] text-[var(--color-ui-text-muted)] mt-1">
+                    الحد الأقصى المسموح لك: {maxDiscount}%
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-ui-text-secondary)] mb-2">الإجمالي (ر.س) <span className="text-red-500">*</span></label>
+                  <input 
+                    type="number" 
+                    value={totalPrice}
+                    readOnly
+                    className="w-full glass-input p-3.5 bg-[var(--color-ui-bg-panel)] opacity-80 cursor-not-allowed" 
+                    placeholder="يتم حسابه تلقائياً" 
+                  />
+                  {originalPrice > 0 && parseFloat(discount) > 0 && (
+                    <p className="text-[10px] text-emerald-400 mt-1 line-through opacity-70">
+                      السعر قبل الخصم: {originalPrice} ر.س
+                    </p>
+                  )}
+                  {priceError && <p className="text-red-400 text-xs mt-1">{priceError}</p>}
+                </div>
               </div>
 
               <div>

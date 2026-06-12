@@ -17,7 +17,8 @@ import {
   UserCog,
   LogOut,
   Menu,
-  X
+  X,
+  Palmtree
 } from "lucide-react";
 
 import { hasPermission, Permission } from "@/lib/permissions";
@@ -67,13 +68,13 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
 
       <aside className={`fixed md:relative top-0 right-0 h-screen bg-[var(--color-ui-bg-panel)] border-l border-[var(--color-ui-border-subtle)] w-64 flex flex-col z-40 transition-transform duration-300 ${isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"} overflow-y-auto`}>
         {/* Brand */}
-      <div className="p-6 flex items-center justify-center border-b border-[var(--color-ui-border-subtle)] gap-3 bg-gradient-to-b from-[var(--color-ui-bg-panel-hover)] to-transparent">
-        <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-brand-light)] to-[var(--color-brand-dark)] rounded-xl flex items-center justify-center shadow-lg shadow-[var(--color-brand-glow)] transform transition-transform hover:rotate-6">
-          <span className="text-xl">🏖️</span>
+      <div className="p-6 flex items-center justify-start border-b border-[var(--color-ui-border-subtle)] gap-3 bg-gradient-to-b from-[var(--color-ui-bg-panel-hover)] to-transparent">
+        <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-brand-primary)] to-[var(--color-brand-dark)] rounded-xl flex items-center justify-center shadow-lg shadow-[var(--color-brand-glow)] transform transition-transform hover:rotate-6">
+          <Palmtree className="text-white w-6 h-6" />
         </div>
-        <div>
+        <div className="text-right">
           <h1 className="font-bold text-white text-lg tracking-wide">إدارة الشاليهات</h1>
-          <p className="text-[10px] text-[var(--color-ui-text-muted)] uppercase tracking-widest">Alaa & Ayman Team</p>
+          <p className="text-[10px] text-[var(--color-ui-text-muted)] uppercase tracking-widest">Alaa Soft</p>
         </div>
       </div>
 

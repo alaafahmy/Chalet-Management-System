@@ -225,6 +225,13 @@ export async function addReservation(formData: FormData) {
   const checkOutStr = formData.get("checkOut") as string;
   const notes = formData.get("notes") as string;
   const totalPriceStr = formData.get("totalPrice") as string;
+  const discountStr = formData.get("discount") as string;
+  const discount = parseFloat(discountStr) || 0;
+
+  const maxDiscount = (user.role === "admin" || user.role === "reservation_manager") ? 100 : 20;
+  if (discount > maxDiscount || discount < 0) {
+    return { error: `نسبة الخصم غير صالحة. الحد الأقصى لك هو ${maxDiscount}%` };
+  }
 
   const vDate = validateDateRange(checkInStr, checkOutStr);
   if (!vDate.valid) return { error: vDate.message };
@@ -246,7 +253,7 @@ export async function addReservation(formData: FormData) {
     const conflict = await prisma.reservation.findFirst({
       where: {
         chaletId,
-        status: { in: ["مؤكد", "معلق"] },
+        status: { in: ["مؤكد", "مكتمل"] },
         AND: [
           { checkIn: { lt: checkOut } },
           { checkOut: { gt: checkIn } },
@@ -261,7 +268,7 @@ export async function addReservation(formData: FormData) {
       const nextAvailable = await prisma.reservation.findFirst({
         where: {
           chaletId,
-          status: { in: ["مؤكد", "معلق"] },
+          status: { in: ["مؤكد", "مكتمل"] },
           checkOut: { gte: checkIn }
         },
         orderBy: { checkOut: 'asc' }
@@ -291,18 +298,13 @@ export async function addReservation(formData: FormData) {
         checkOut, 
         nights, 
         pricePerNight, 
+        discount,
         totalCost, 
         status: "معلق", 
         notes: notes || null,
         created_by: user.id,
         ref_number: ref
       },
-    });
-
-    // Auto-update chalet status
-    await prisma.chalet.update({
-      where: { id: chaletId },
-      data: { status: "محجوز" }
     });
 
     await logAction({ userId: user.id, action: "إنشاء حجز", table: "Reservation", recordId: reservation.id, newValue: reservation });
@@ -334,6 +336,24 @@ export async function updateReservationStatus(id: string, status: string) {
           error: `لا يمكن تسجيل الخروج! يوجد مبلغ متبقي غير مدفوع: ${new Intl.NumberFormat("ar-SA").format(remaining)} ر.س. يرجى تسجيل الدفعة أولاً.`,
           remainingAmount: remaining,
         };
+      }
+    }
+
+    if (status === "مؤكد") {
+      const conflict = await prisma.reservation.findFirst({
+        where: {
+          chaletId: reservation.chaletId,
+          id: { not: id },
+          status: { in: ["مؤكد", "مكتمل"] },
+          AND: [
+            { checkIn: { lt: reservation.checkOut } },
+            { checkOut: { gt: reservation.checkIn } },
+            { NOT: { checkOut: { equals: reservation.checkIn } } }
+          ],
+        },
+      });
+      if (conflict) {
+        return { error: "لا يمكن تأكيد الحجز لوجود تعارض مع حجز مؤكد آخر في نفس الفترة." };
       }
     }
 
@@ -441,6 +461,13 @@ export async function updateReservationDetails(formData: FormData) {
   const checkOutStr = formData.get("checkOut") as string;
   const notes = formData.get("notes") as string;
   const totalPriceStr = formData.get("totalPrice") as string;
+  const discountStr = formData.get("discount") as string;
+  const discount = parseFloat(discountStr) || 0;
+
+  const maxDiscount = (user.role === "admin" || user.role === "reservation_manager") ? 100 : 20;
+  if (discount > maxDiscount || discount < 0) {
+    return { error: `نسبة الخصم غير صالحة. الحد الأقصى لك هو ${maxDiscount}%` };
+  }
 
   const vDate = validateDateRange(checkInStr, checkOutStr);
   if (!vDate.valid) return { error: vDate.message };
@@ -474,7 +501,7 @@ export async function updateReservationDetails(formData: FormData) {
       where: {
         chaletId,
         id: { not: id },
-        status: { in: ["مؤكد", "معلق"] },
+        status: { in: ["مؤكد", "مكتمل"] },
         AND: [
           { checkIn: { lt: checkOut } },
           { checkOut: { gt: checkIn } },
@@ -505,6 +532,7 @@ export async function updateReservationDetails(formData: FormData) {
         nights,
         totalCost,
         pricePerNight,
+        discount,
         notes,
       }
     });
@@ -570,6 +598,24 @@ export async function addPayment(formData: FormData) {
       };
     }
 
+    if (reservation.status === "معلق") {
+      const conflict = await prisma.reservation.findFirst({
+        where: {
+          chaletId: reservation.chaletId,
+          id: { not: reservation.id },
+          status: { in: ["مؤكد", "مكتمل"] },
+          AND: [
+            { checkIn: { lt: reservation.checkOut } },
+            { checkOut: { gt: reservation.checkIn } },
+            { NOT: { checkOut: { equals: reservation.checkIn } } }
+          ],
+        },
+      });
+      if (conflict) {
+        return { error: "لا يمكن تسجيل الدفعة لتأكيد الحجز، حيث يوجد حجز مؤكد آخر لنفس الشاليه في هذه الفترة. يرجى إلغاء هذا الحجز أو تعديل تواريخه أولاً." };
+      }
+    }
+
     // FIX-BL-04: Generate receipt number
     const ref = await generateRefNumber('RCP', prisma);
     const receipt_number = ref;
@@ -600,8 +646,22 @@ export async function addPayment(formData: FormData) {
 
     await logAction({ userId: user.id, action: "تسجيل دفعة", table: "Payment", recordId: newPayment.id, newValue: newPayment });
 
+    if (reservation.status === "معلق") {
+      await prisma.reservation.update({
+        where: { id: reservationId },
+        data: { status: "مؤكد" }
+      });
+      await prisma.chalet.update({
+        where: { id: reservation.chaletId },
+        data: { status: "محجوز" }
+      });
+      await logAction({ userId: user.id, action: "تأكيد تلقائي بالدفع", table: "Reservation", recordId: reservationId, oldValue: { status: "معلق" }, newValue: { status: "مؤكد" } });
+    }
+
     revalidateFinancials();
     revalidatePath("/dashboard/reservations");
+    revalidatePath("/dashboard/calendar");
+    revalidatePath("/dashboard/chalets");
     return { success: true };
   } catch (e) {
     console.error(e);
