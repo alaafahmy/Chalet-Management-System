@@ -88,8 +88,8 @@ export default function LoginPage() {
         </div>
 
         {/* Welcome Text */}
-        <div className="text-right mb-10 mt-12 relative z-10">
-          <h2 className="text-4xl font-bold text-white mb-3 animate-fade-in">مرحباً بعودتك</h2>
+        <div className="text-right mb-10 mt-20 relative z-10">
+          <h2 className="text-3xl font-bold text-white mb-3 animate-fade-in">مرحباً بعودتك</h2>
           <p className="text-sm text-[var(--color-ui-text-muted)] animate-fade-in" style={{ animationDelay: '100ms' }}>
             قم بتسجيل الدخول للوصول الى لوحة التحكم
           </p>
