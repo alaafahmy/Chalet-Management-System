@@ -76,12 +76,23 @@ export default function LoginPage() {
         <div className="absolute top-[-50px] left-[-50px] w-[150px] h-[150px] bg-[#d4a853] rounded-full blur-[80px] opacity-20 pointer-events-none" />
         <div className="absolute bottom-[-50px] right-[-50px] w-[150px] h-[150px] bg-[#3b82f6] rounded-full blur-[80px] opacity-10 pointer-events-none" />
 
-        <div className="text-center mb-8 relative z-10">
-          <div className="w-20 h-20 bg-gradient-to-br from-[#fbeea1] to-[#b18532] rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-[#d4a853]/20">
-            <span className="text-4xl">🏖️</span>
+        {/* Top Right Logo & System Name */}
+        <div className="absolute top-8 right-8 flex items-center gap-3 z-10 animate-fade-in">
+          <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-brand-light)] to-[var(--color-brand-dark)] rounded-xl flex items-center justify-center shadow-lg shadow-[var(--color-brand-glow)]">
+            <span className="text-lg">🏖️</span>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">نظام إدارة الشاليهات</h1>
-          <p className="text-[#8b92a5] text-sm tracking-wide">Chalet Management System</p>
+          <div>
+            <h1 className="text-sm font-bold text-white tracking-wide">نظام إدارة الشاليهات</h1>
+            <p className="text-[10px] text-[var(--color-ui-text-muted)] uppercase tracking-widest">Chalet System</p>
+          </div>
+        </div>
+
+        {/* Welcome Text */}
+        <div className="text-right mb-10 mt-12 relative z-10">
+          <h2 className="text-4xl font-bold text-white mb-3 animate-fade-in">مرحباً بعودتك</h2>
+          <p className="text-sm text-[var(--color-ui-text-muted)] animate-fade-in" style={{ animationDelay: '100ms' }}>
+            قم بتسجيل الدخول للوصول الى لوحة التحكم
+          </p>
         </div>
 
         {error && (
@@ -149,16 +160,16 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={pending}
-            className="w-full bg-gradient-to-r from-[#d4a853] to-[#b18532] hover:from-[#fbeea1] hover:to-[#d4a853] text-[#06080d] font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-95 shadow-lg shadow-[#d4a853]/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full btn-primary py-3.5 px-4 flex items-center justify-center gap-2"
           >
             {pending ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+              <>
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
                 جاري التحقق...
-              </span>
+              </>
             ) : "تسجيل الدخول"}
           </button>
 
