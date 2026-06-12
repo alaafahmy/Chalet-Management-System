@@ -143,3 +143,56 @@ option {
 .animate-scale-up {
   animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Print Styles */
+@media print {
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+  
+  body {
+    background-color: white !important;
+    background-image: none !important;
+    color: black !important;
+  }
+  
+  .hide-print,
+  aside,
+  header {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  .glass-panel,
+  .bg-\[var\(--color-ui-bg-panel\)\] {
+    background: white !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    color: black !important;
+  }
+
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th, td {
+    border: 1px solid #ddd !important;
+    color: black !important;
+  }
+
+  th {
+    background-color: #f8f9fa !important;
+    color: #333 !important;
+  }
+
+  * {
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}

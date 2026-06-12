@@ -18,7 +18,8 @@ import {
   LogOut,
   Menu,
   X,
-  Palmtree
+  Palmtree,
+  FileText
 } from "lucide-react";
 
 import { hasPermission, Permission } from "@/lib/permissions";
@@ -44,6 +45,7 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
     { name: "الإيرادات", href: "/dashboard/revenue", icon: TrendingUp, requiredPermission: "view_financial_reports" as Permission },
     { name: "المصروفات", href: "/dashboard/expenses", icon: TrendingDown, requiredPermission: "manage_expenses" as Permission },
     { name: "الأرباح", href: "/dashboard/profits", icon: LineChart, requiredPermission: "view_profit_analysis" as Permission },
+    { name: "التقارير", href: "/dashboard/reports", icon: FileText, requiredPermission: "view_financial_reports" as Permission },
     { name: "الصيانة", href: "/dashboard/maintenance", icon: Wrench, requiredPermission: "view_maintenance" as Permission },
     { name: "المستخدمين", href: "/dashboard/users", icon: UserCog, requiredPermission: "manage_users" as Permission },
   ];
