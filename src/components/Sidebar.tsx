@@ -100,16 +100,7 @@ export default function Sidebar({ userRole, isOpen, onClose }: SidebarProps) {
           })}
         </nav>
 
-        {/* Logout */}
-        <div className="p-4 border-t border-[var(--color-ui-border-subtle)] bg-[var(--color-ui-bg-panel)]">
-          <Link
-            href="/"
-            className="group flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:shadow-[inset_0_0_12px_rgba(239,68,68,0.1)] transition-all duration-300"
-          >
-            <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium">تسجيل الخروج</span>
-          </Link>
-        </div>
+
       </aside>
     </>
   );
