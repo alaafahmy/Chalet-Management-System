@@ -93,10 +93,10 @@ export default function ExportButton({ type, label, chalets = [] }: ExportButton
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/40 text-emerald-400 hover:text-emerald-300 px-4 py-2 rounded-lg transition-all text-sm font-bold"
+        className="action-btn action-btn-success"
         title="تصدير التقرير"
       >
-        <Download size={16} />
+        <Download size={15} />
         <span>{label || "تصدير"}</span>
       </button>
 

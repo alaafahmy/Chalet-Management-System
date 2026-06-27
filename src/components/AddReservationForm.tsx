@@ -119,9 +119,9 @@ export default function AddReservationForm({ clients, chalets, userRole }: { cli
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="btn-primary px-5 py-2.5 flex items-center gap-2"
+        className="action-btn action-btn-primary"
       >
-        <Plus size={18} /> إضافة حجز جديد
+        <Plus size={16} /> إضافة حجز جديد
       </button>
 
       {isOpen && (

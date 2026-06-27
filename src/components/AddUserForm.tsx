@@ -78,9 +78,9 @@ export default function AddUserForm() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="bg-gradient-to-r from-[#d4a853] to-[#b18532] text-[#06080d] px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:opacity-90 transition-opacity"
+        className="action-btn action-btn-primary"
       >
-        <Plus size={18} /> إضافة مستخدم
+        <Plus size={16} /> إضافة مستخدم
       </button>
 
       {isOpen && (
