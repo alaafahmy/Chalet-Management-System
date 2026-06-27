@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,17 +15,20 @@ import {
   Wrench,
   UserCog,
   LogOut,
-  Menu,
-  X,
   Palmtree,
   FileText
 } from "lucide-react";
 
 import { hasPermission, Permission } from "@/lib/permissions";
 
-export default function Sidebar({ userRole }: { userRole?: string }) {
+interface SidebarProps {
+  userRole?: string;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ userRole, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
 
   // Helper function to check if the link should be shown
   const checkAccess = (permission?: Permission) => {
@@ -54,66 +56,61 @@ export default function Sidebar({ userRole }: { userRole?: string }) {
 
   return (
     <>
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden hide-print fixed bottom-6 right-6 z-50 bg-gradient-to-r from-[var(--color-brand-primary)] to-[var(--color-brand-dark)] text-[var(--color-ui-bg-base)] p-4 rounded-full shadow-[0_0_20px_var(--color-brand-glow)] hover:scale-105 transition-transform"
-      >
-        {isOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
-
+      {/* Overlay - Mobile only */}
       {isOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-md z-30 transition-opacity" 
-          onClick={() => setIsOpen(false)}
+        <div
+          className="md:hidden fixed inset-0 bg-black/80 backdrop-blur-md z-30 transition-opacity"
+          onClick={onClose}
         />
       )}
 
       <aside className={`fixed md:relative top-0 right-0 h-screen bg-[var(--color-ui-bg-panel)] border-l border-[var(--color-ui-border-subtle)] w-64 flex flex-col z-40 transition-transform duration-300 ${isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"} overflow-y-auto`}>
         {/* Brand */}
-      <div className="p-6 flex items-center justify-start border-b border-[var(--color-ui-border-subtle)] gap-3 bg-gradient-to-b from-[var(--color-ui-bg-panel-hover)] to-transparent">
-        <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-brand-primary)] to-[var(--color-brand-dark)] rounded-xl flex items-center justify-center shadow-lg shadow-[var(--color-brand-glow)] transform transition-transform hover:rotate-6">
-          <Palmtree className="text-white w-6 h-6" />
+        <div className="p-6 flex items-center justify-start border-b border-[var(--color-ui-border-subtle)] gap-3 bg-gradient-to-b from-[var(--color-ui-bg-panel-hover)] to-transparent">
+          <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-brand-primary)] to-[var(--color-brand-dark)] rounded-xl flex items-center justify-center shadow-lg shadow-[var(--color-brand-glow)] transform transition-transform hover:rotate-6">
+            <Palmtree className="text-white w-6 h-6" />
+          </div>
+          <div className="text-right">
+            <h1 className="font-bold text-white text-lg tracking-wide">إدارة الشاليهات</h1>
+            <p className="text-[10px] text-[var(--color-ui-text-muted)] uppercase tracking-widest">Alaa Soft</p>
+          </div>
         </div>
-        <div className="text-right">
-          <h1 className="font-bold text-white text-lg tracking-wide">إدارة الشاليهات</h1>
-          <p className="text-[10px] text-[var(--color-ui-text-muted)] uppercase tracking-widest">Alaa Soft</p>
+
+        {/* Nav */}
+        <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto">
+          {links.map((link, index) => {
+            const isActive = pathname === link.href;
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.name}
+                href={link.href}
+                onClick={onClose}
+                className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 animate-fade-in ${
+                  isActive
+                    ? "bg-[var(--color-ui-bg-input)] text-[var(--color-brand-primary)] font-bold border-r-2 border-[var(--color-brand-primary)] shadow-[inset_0_0_12px_rgba(212,168,83,0.1)]"
+                    : "text-[var(--color-ui-text-secondary)] hover:bg-[var(--color-ui-bg-panel-hover)] hover:text-white"
+                }`}
+                style={{ animationDelay: `${index * 30}ms` }}
+              >
+                <Icon size={20} className={`transition-transform duration-300 group-hover:scale-110 ${isActive ? "text-[var(--color-brand-primary)]" : "text-[var(--color-ui-text-muted)] group-hover:text-[var(--color-brand-primary)]"}`} />
+                <span className="group-hover:translate-x-[-4px] transition-transform duration-300">{link.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div className="p-4 border-t border-[var(--color-ui-border-subtle)] bg-[var(--color-ui-bg-panel)]">
+          <Link
+            href="/"
+            className="group flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:shadow-[inset_0_0_12px_rgba(239,68,68,0.1)] transition-all duration-300"
+          >
+            <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">تسجيل الخروج</span>
+          </Link>
         </div>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto">
-        {links.map((link, index) => {
-          const isActive = pathname === link.href;
-          const Icon = link.icon;
-          return (
-            <Link
-              key={link.name}
-              href={link.href}
-              className={`group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 animate-fade-in ${
-                isActive
-                  ? "bg-[var(--color-ui-bg-input)] text-[var(--color-brand-primary)] font-bold border-r-2 border-[var(--color-brand-primary)] shadow-[inset_0_0_12px_rgba(212,168,83,0.1)]"
-                  : "text-[var(--color-ui-text-secondary)] hover:bg-[var(--color-ui-bg-panel-hover)] hover:text-white"
-              }`}
-              style={{ animationDelay: `${index * 30}ms` }}
-            >
-              <Icon size={20} className={`transition-transform duration-300 group-hover:scale-110 ${isActive ? "text-[var(--color-brand-primary)]" : "text-[var(--color-ui-text-muted)] group-hover:text-[var(--color-brand-primary)]"}`} />
-              <span className="group-hover:translate-x-[-4px] transition-transform duration-300">{link.name}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Logout */}
-      <div className="p-4 border-t border-[var(--color-ui-border-subtle)] bg-[var(--color-ui-bg-panel)]">
-        <Link
-          href="/"
-          className="group flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:shadow-[inset_0_0_12px_rgba(239,68,68,0.1)] transition-all duration-300"
-        >
-          <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium">تسجيل الخروج</span>
-        </Link>
-      </div>
-    </aside>
+      </aside>
     </>
   );
 }
