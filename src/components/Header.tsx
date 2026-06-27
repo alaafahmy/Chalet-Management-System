@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Search, LogOut, User, X, Menu, ChevronDown } from "lucide-react";
+import { Bell, Search, LogOut, User, X, Menu } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 
@@ -241,8 +241,8 @@ export default function Header({
             </button>
           </div>
 
-          {/* User Avatar - Mobile */}
-          <div className="relative md:hidden" ref={userMenuRef}>
+          {/* User Avatar - Mobile only: opens profile card */}
+          <div className="md:hidden" ref={userMenuRef}>
             <button
               className="w-9 h-9 bg-gradient-to-br from-[var(--color-brand-light)] to-[var(--color-brand-dark)] rounded-xl flex items-center justify-center font-bold text-[var(--color-ui-bg-base)] shadow-[0_2px_10px_var(--color-brand-glow)] cursor-pointer"
               onClick={() => setShowUserMenu(!showUserMenu)}
@@ -252,22 +252,26 @@ export default function Header({
             </button>
           </div>
 
-          {/* User Info - Desktop */}
-          <div className="hidden md:flex items-center gap-3 pr-4 border-r border-[var(--color-ui-border-subtle)] relative" ref={userMenuRef}>
-            <button
-              onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-3 hover:bg-[var(--color-ui-bg-input)] px-3 py-2 rounded-xl transition-all duration-300 group"
-            >
-              <div className="text-left">
-                <div className="text-sm font-bold text-white">{userName}</div>
-                <div className="text-xs text-[var(--color-brand-primary)] uppercase tracking-wider">{userRole}</div>
-              </div>
-              <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-brand-light)] to-[var(--color-brand-dark)] rounded-xl flex items-center justify-center font-bold text-[var(--color-ui-bg-base)] shadow-[0_2px_10px_var(--color-brand-glow)]">
-                <User size={18} />
-              </div>
-              <ChevronDown size={14} className={`text-[var(--color-ui-text-muted)] transition-transform duration-300 ${showUserMenu ? 'rotate-180' : ''}`} />
-            </button>
+          {/* User Info - Desktop: shows name/role + direct logout button */}
+          <div className="hidden md:flex items-center gap-3 pr-4 border-r border-[var(--color-ui-border-subtle)]">
+            <div className="text-left">
+              <div className="text-sm font-bold text-white">{userName}</div>
+              <div className="text-xs text-[var(--color-brand-primary)] uppercase tracking-wider">{userRole}</div>
+            </div>
+            <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-brand-light)] to-[var(--color-brand-dark)] rounded-xl flex items-center justify-center font-bold text-[var(--color-ui-bg-base)] shadow-[0_2px_10px_var(--color-brand-glow)]">
+              <User size={18} />
+            </div>
           </div>
+
+          {/* Logout Button - Desktop only */}
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="hidden md:flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 px-4 py-2 rounded-xl transition-all duration-300 text-sm font-bold group"
+            title="تسجيل الخروج"
+          >
+            <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
+            <span>خروج</span>
+          </button>
 
           {/* Menu Toggle Button - Mobile only */}
           <button
@@ -384,14 +388,19 @@ export default function Header({
         </div>
       )}
 
-      {/* User Profile Menu - Fixed overlay */}
+      {/* User Profile Card - Mobile ONLY, fixed position */}
       {showUserMenu && (
-        <div className="fixed inset-0 z-[55]" onClick={() => setShowUserMenu(false)}>
+        <>
+          {/* Backdrop */}
           <div
-            className="absolute top-16 md:top-20 left-3 right-3 md:left-auto md:right-4 md:w-72 glass-panel overflow-hidden animate-scale-up origin-top-left md:origin-top-right"
-            onClick={(e) => e.stopPropagation()}
+            className="md:hidden fixed inset-0 z-[55] bg-transparent"
+            onClick={() => setShowUserMenu(false)}
+          />
+          {/* Profile Card */}
+          <div
+            className="md:hidden fixed top-16 left-3 right-3 z-[56] glass-panel overflow-hidden animate-scale-up origin-top"
           >
-            {/* User Info Header */}
+            {/* User Info */}
             <div className="p-5 bg-gradient-to-br from-[var(--color-ui-bg-panel-hover)] to-transparent border-b border-[var(--color-ui-border-subtle)]">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 bg-gradient-to-br from-[var(--color-brand-light)] to-[var(--color-brand-dark)] rounded-2xl flex items-center justify-center shadow-[0_4px_12px_var(--color-brand-glow)]">
@@ -407,21 +416,23 @@ export default function Header({
                 </div>
               </div>
             </div>
-
             {/* Logout Button */}
             <div className="p-3">
               <button
-                onClick={() => { setShowUserMenu(false); setShowLogoutConfirm(true); }}
+                onClick={() => {
+                  setShowUserMenu(false);
+                  setTimeout(() => setShowLogoutConfirm(true), 50);
+                }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-300 font-medium text-sm group"
               >
                 <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
-                  <LogOut size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+                  <LogOut size={16} />
                 </div>
                 <span>تسجيل الخروج</span>
               </button>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Logout Confirm Dialog */}
