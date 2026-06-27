@@ -99,9 +99,8 @@ export default function Header({
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
         setShowNotifications(false);
       }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setShowUserMenu(false);
-      }
+      // Note: userMenu is closed via the backdrop overlay onClick, NOT here.
+      // Closing here via mousedown would unmount the card before click fires on logout button.
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
